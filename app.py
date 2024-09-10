@@ -11,6 +11,9 @@ st.write("Upload an Excel file containing 'Pathway', 'Fold Enrichment', and 'p-v
 def load_data(uploaded_file):
     data = pd.read_excel(uploaded_file)
     
+    # Display actual column names from the file
+    st.write("Columns in the uploaded file:", data.columns.tolist())
+
     # Check if expected columns exist in the dataframe
     expected_columns = ['Pathway', 'Fold Enrichment', 'p-value']
     missing_columns = [col for col in expected_columns if col not in data.columns]
