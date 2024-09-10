@@ -5,16 +5,19 @@ import numpy as np
 
 # Set the title and description of the app
 st.title("Pathway Significance Visualization")
-st.write("Upload an Excel file containing 'Pathway', 'Fold Enrichment', and 'p-value' columns.")
+st.write("Upload an Excel file containing columns like 'Annotation Name', 'Enrichment', and 'p-value'.")
 
 # Function to load data from an uploaded Excel file
 def load_data(uploaded_file):
     data = pd.read_excel(uploaded_file)
     
-    # Display actual column names from the file
-    st.write("Columns in the uploaded file:", data.columns.tolist())
+    # Rename the columns to match expected naming
+    data.rename(columns={'Annotation Name': 'Pathway', 'Enrichment': 'Fold Enrichment'}, inplace=True)
+    
+    # Display actual column names after renaming
+    st.write("Renamed columns in the uploaded file:", data.columns.tolist())
 
-    # Check if expected columns exist in the dataframe
+    # Check if expected columns exist in the dataframe after renaming
     expected_columns = ['Pathway', 'Fold Enrichment', 'p-value']
     missing_columns = [col for col in expected_columns if col not in data.columns]
     if missing_columns:
