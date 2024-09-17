@@ -75,22 +75,23 @@ if uploaded_file is not None:
         st.write("### Export Chart")
         export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG"])
 
-        if export_as == "JPG":
+        # Function to save the plot to a buffer and download
+        def save_and_download(format):
             buffer = BytesIO()
-            plt.savefig(buffer, format='jpeg')
+            plt.savefig(buffer, format=format, bbox_inches='tight', facecolor='white')
             buffer.seek(0)
+            return buffer
+
+        if export_as == "JPG":
+            buffer = save_and_download("jpeg")
             st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
 
         elif export_as == "PNG":
-            buffer = BytesIO()
-            plt.savefig(buffer, format='png')
-            buffer.seek(0)
+            buffer = save_and_download("png")
             st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
 
         elif export_as == "SVG":
-            buffer = BytesIO()
-            plt.savefig(buffer, format='svg')
-            buffer.seek(0)
+            buffer = save_and_download("svg")
             st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
 
 else:
