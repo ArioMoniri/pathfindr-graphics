@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from io import BytesIO
 
 # Set the title and description of the app
 st.title("Pathway Significance Visualization")
@@ -30,6 +31,33 @@ def load_data(uploaded_file):
     data.sort_values(by='-log10(p-value)', ascending=False, inplace=True)
     return data
 
+# Function to plot and export the chart
+def plot_and_export_chart(df):
+    # Selecting the top 10 significant pathways for visualization
+    top_10_pathways = df.head(10)
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    scatter = plt.scatter(
+        x=top_10_pathways['Fold Enrichment'],
+        y=top_10_pathways['Pathway'],
+        c=top_10_pathways['-log10(p-value)'],
+        cmap='viridis',  # Color map for intensity
+        s=300,  # Increased size for greater emphasis
+        alpha=0.85,
+        marker='o',  # Circle markers
+        edgecolor='black'  # Adding edge for better visibility
+    )
+    plt.colorbar(scatter, label='-log10(p-value)')
+    plt.xlabel('Fold Enrichment')
+    plt.ylabel('Pathway')
+    plt.title('Top 10 Pathways by Significance')
+    plt.gca().invert_yaxis()  # Invert y-axis for significance order
+    plt.yticks(fontsize=8)  # Reduce font size to de-emphasize pathway names
+    plt.tight_layout()
+
+    return plt
+
 # File uploader widget
 uploaded_file = st.file_uploader("Upload your data file", type=["xlsx"])
 
@@ -39,28 +67,31 @@ if uploaded_file is not None:
         st.write("Data loaded successfully!")
         st.dataframe(df.head(10))  # Displaying the top 10 entries for review
 
-        # Selecting the top 10 significant pathways for visualization
-        top_10_pathways = df.head(10)
-
-        # Plotting
-        plt.figure(figsize=(10, 6))
-        scatter = plt.scatter(
-            x=top_10_pathways['Fold Enrichment'],
-            y=top_10_pathways['Pathway'],
-            c=top_10_pathways['-log10(p-value)'],
-            cmap='viridis',  # Color map for intensity
-            s=300,  # Increased size for greater emphasis
-            alpha=0.85,
-            marker='o',  # Circle markers
-            edgecolor='black'  # Adding edge for better visibility
-        )
-        plt.colorbar(scatter, label='-log10(p-value)')
-        plt.xlabel('Fold Enrichment')
-        plt.ylabel('Pathway')
-        plt.title('Top 10 Pathways by Significance')
-        plt.gca().invert_yaxis()  # Invert y-axis for significance order
-        plt.yticks(fontsize=8)  # Reduce font size to de-emphasize pathway names
-        plt.tight_layout()
+        # Plot and display the chart
+        plt = plot_and_export_chart(df)
         st.pyplot(plt)
+
+        # Export buttons
+        st.write("### Export Chart")
+        export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG"])
+
+        if export_as == "JPG":
+            buffer = BytesIO()
+            plt.savefig(buffer, format='jpeg')
+            buffer.seek(0)
+            st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
+
+        elif export_as == "PNG":
+            buffer = BytesIO()
+            plt.savefig(buffer, format='png')
+            buffer.seek(0)
+            st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
+
+        elif export_as == "SVG":
+            buffer = BytesIO()
+            plt.savefig(buffer, format='svg')
+            buffer.seek(0)
+            st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
+
 else:
     st.warning("Please upload an Excel file to visualize the data.")
