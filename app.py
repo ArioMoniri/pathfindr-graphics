@@ -56,7 +56,7 @@ def plot_and_export_chart(df):
     plt.yticks(fontsize=8)  # Reduce font size to de-emphasize pathway names
     plt.tight_layout()
 
-    return plt
+    return plt.gcf()  # Get current figure
 
 # File uploader widget
 uploaded_file = st.file_uploader("Upload your data file", type=["xlsx"])
@@ -68,8 +68,8 @@ if uploaded_file is not None:
         st.dataframe(df.head(10))  # Displaying the top 10 entries for review
 
         # Plot and display the chart
-        plt = plot_and_export_chart(df)
-        st.pyplot(plt)
+        fig = plot_and_export_chart(df)
+        st.pyplot(fig)
 
         # Export buttons
         st.write("### Export Chart")
@@ -78,8 +78,9 @@ if uploaded_file is not None:
         # Function to save the plot to a buffer and download
         def save_and_download(format):
             buffer = BytesIO()
-            plt.savefig(buffer, format=format, bbox_inches='tight', facecolor='white')
+            fig.savefig(buffer, format=format, bbox_inches='tight', facecolor='white')
             buffer.seek(0)
+            plt.close(fig)  # Close the figure after saving to prevent further modifications
             return buffer
 
         if export_as == "JPG":
