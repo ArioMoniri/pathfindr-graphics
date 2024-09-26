@@ -37,7 +37,8 @@ def generate_colormap(color1, color2):
     return LinearSegmentedColormap.from_list('custom_cmap', [color1, color2])
 
 # Function to plot and export the chart
-def plot_and_export_chart(df, min_enrichment, max_enrichment, colormap):
+# Function to plot and export the chart with customizable title, x-axis, and y-axis labels
+def plot_and_export_chart(df, min_enrichment, max_enrichment, colormap, title, x_label, y_label, legend_label):
     # Filter the data to include only rows within the selected fold enrichment range
     filtered_data = df[(df['Fold Enrichment'] >= min_enrichment) & (df['Fold Enrichment'] <= max_enrichment)]
     
@@ -64,15 +65,32 @@ def plot_and_export_chart(df, min_enrichment, max_enrichment, colormap):
         marker='o',  # Circle markers
         edgecolor='black'  # Adding edge for better visibility
     )
-    plt.colorbar(scatter, label='-log10(p-value)')
-    plt.xlabel('Fold Enrichment')
-    plt.ylabel('Pathway')
-    plt.title('Top 10 Pathways by Significance')
-    plt.gca().invert_yaxis()  # Invert y-axis for significance order
+    
+    # Add colorbar with a customizable legend
+    plt.colorbar(scatter, label=legend_label if legend_label else '-log10(p-value)')
+    
+    # Add x, y labels and title (using defaults if not provided)
+    plt.xlabel(x_label if x_label else 'Fold Enrichment')
+    plt.ylabel(y_label if y_label else 'Pathway')
+    plt.title(title if title else 'Top 10 Pathways by Significance')
+
+    # Invert y-axis for significance order
+    plt.gca().invert_yaxis()  
     plt.yticks(fontsize=8)  # Reduce font size to de-emphasize pathway names
     plt.tight_layout()
 
     return plt.gcf()  # Get current figure
+
+# Allow user to set title, x-axis, y-axis, and legend labels
+st.write("### Customize Labels (Optional)")
+custom_title = st.text_input("Title", "Top 10 Pathways by Significance")
+custom_x_label = st.text_input("X-axis Label", "Fold Enrichment")
+custom_y_label = st.text_input("Y-axis Label", "Pathway")
+custom_legend_label = st.text_input("Legend Label", "-log10(p-value)")
+
+# Plot and display the chart with customizable labels
+fig = plot_and_export_chart(df, min_enrichment, max_enrichment, colormap, custom_title, custom_x_label, custom_y_label, custom_legend_label)
+st.pyplot(fig)
 
 # File uploader widget
 uploaded_file = st.file_uploader("Upload your data file", type=["xlsx"])
