@@ -36,8 +36,7 @@ def load_data(uploaded_file):
 def generate_colormap(color1, color2):
     return LinearSegmentedColormap.from_list('custom_cmap', [color1, color2])
 
-# Function to plot and export the chart
-# Function to plot and export the chart with customizable title, x-axis, and y-axis labels
+# Function to plot and export the chart with customizable title, x-axis, y-axis, and legend labels
 def plot_and_export_chart(df, min_enrichment, max_enrichment, colormap, title, x_label, y_label, legend_label):
     # Filter the data to include only rows within the selected fold enrichment range
     filtered_data = df[(df['Fold Enrichment'] >= min_enrichment) & (df['Fold Enrichment'] <= max_enrichment)]
@@ -81,17 +80,6 @@ def plot_and_export_chart(df, min_enrichment, max_enrichment, colormap, title, x
 
     return plt.gcf()  # Get current figure
 
-# Allow user to set title, x-axis, y-axis, and legend labels
-st.write("### Customize Labels (Optional)")
-custom_title = st.text_input("Title", "Top 10 Pathways by Significance")
-custom_x_label = st.text_input("X-axis Label", "Fold Enrichment")
-custom_y_label = st.text_input("Y-axis Label", "Pathway")
-custom_legend_label = st.text_input("Legend Label", "-log10(p-value)")
-
-# Plot and display the chart with customizable labels
-fig = plot_and_export_chart(df, min_enrichment, max_enrichment, colormap, custom_title, custom_x_label, custom_y_label, custom_legend_label)
-st.pyplot(fig)
-
 # File uploader widget
 uploaded_file = st.file_uploader("Upload your data file", type=["xlsx"])
 
@@ -119,9 +107,19 @@ if uploaded_file is not None:
             # Default colormap as 'viridis'
             colormap = 'viridis'
 
-        # Plot and display the chart within the selected range
-        fig = plot_and_export_chart(df, min_enrichment, max_enrichment, colormap)
-        st.pyplot(fig)
+        # Allow user to set title, x-axis, y-axis, and legend labels
+        st.write("### Customize Labels (Optional)")
+        custom_title = st.text_input("Title", "Top 10 Pathways by Significance")
+        custom_x_label = st.text_input("X-axis Label", "Fold Enrichment")
+        custom_y_label = st.text_input("Y-axis Label", "Pathway")
+        custom_legend_label = st.text_input("Legend Label", "-log10(p-value)")
+
+        # Check if df is not None and plot
+        if df is not None:
+            fig = plot_and_export_chart(df, min_enrichment, max_enrichment, colormap, custom_title, custom_x_label, custom_y_label, custom_legend_label)
+            st.pyplot(fig)
+        else:
+            st.error("Data could not be loaded for plotting.")
 
         # Export buttons
         st.write("### Export Chart")
