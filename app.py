@@ -37,17 +37,19 @@ def generate_colormap(color1, color2):
     return LinearSegmentedColormap.from_list('custom_cmap', [color1, color2])
 
 # Function to plot and export the chart with customizable title, x-axis, y-axis, and legend labels
-def plot_and_export_chart(df, min_enrichment, max_enrichment, colormap, title, x_label, y_label, legend_label):
-    # Filter the data to include only rows within the selected fold enrichment range
-    filtered_data = df[(df['Fold Enrichment'] >= min_enrichment) & (df['Fold Enrichment'] <= max_enrichment)]
+def plot_and_export_chart(df, min_enrichment, max_enrichment, min_log_pval, max_log_pval, colormap, title, x_label, y_label, legend_label):
+    # Filter the data to include only rows within the selected fold enrichment and -log10(p-value) ranges
+    filtered_data = df[(df['Fold Enrichment'] >= min_enrichment) & (df['Fold Enrichment'] <= max_enrichment) &
+                       (df['-log10(p-value)'] >= min_log_pval) & (df['-log10(p-value)'] <= max_log_pval)]
     
-    # Identify pathways outside the selected range
-    outside_range = df[(df['Fold Enrichment'] < min_enrichment) | (df['Fold Enrichment'] > max_enrichment)]
+    # Identify pathways outside the selected ranges
+    outside_range = df[(df['Fold Enrichment'] < min_enrichment) | (df['Fold Enrichment'] > max_enrichment) |
+                       (df['-log10(p-value)'] < min_log_pval) | (df['-log10(p-value)'] > max_log_pval)]
     
     # Display pathways that cannot be visualized
     if not outside_range.empty:
-        st.warning(f"The following pathways are outside the selected range ({min_enrichment} to {max_enrichment}):")
-        st.write(outside_range[['Pathway', 'Fold Enrichment']])
+        st.warning(f"The following pathways are outside the selected ranges for fold enrichment or -log10(p-value):")
+        st.write(outside_range[['Pathway', 'Fold Enrichment', '-log10(p-value)']])
 
     # Selecting the top 10 significant pathways for visualization
     top_10_pathways = filtered_data.head(10)
@@ -94,6 +96,11 @@ if uploaded_file is not None:
         min_enrichment = st.slider("Minimum Fold Enrichment", min_value=float(df['Fold Enrichment'].min()), max_value=float(df['Fold Enrichment'].max()), value=float(df['Fold Enrichment'].min()))
         max_enrichment = st.slider("Maximum Fold Enrichment", min_value=min_enrichment, max_value=float(df['Fold Enrichment'].max()), value=float(df['Fold Enrichment'].max()))
 
+        # Select the -log10(p-value) range
+        st.write("### Select -log10(p-value) Range")
+        min_log_pval = st.slider("Minimum -log10(p-value)", min_value=float(df['-log10(p-value)'].min()), max_value=float(df['-log10(p-value)'].max()), value=float(df['-log10(p-value)'].min()))
+        max_log_pval = st.slider("Maximum -log10(p-value)", min_value=min_log_pval, max_value=float(df['-log10(p-value)'].max()), value=float(df['-log10(p-value)'].max()))
+
         # Default colormap option
         st.write("### Customize Color Palette (Optional)")
         use_custom_colors = st.checkbox("Use Custom Colors", value=False)
@@ -116,7 +123,7 @@ if uploaded_file is not None:
 
         # Check if df is not None and plot
         if df is not None:
-            fig = plot_and_export_chart(df, min_enrichment, max_enrichment, colormap, custom_title, custom_x_label, custom_y_label, custom_legend_label)
+            fig = plot_and_export_chart(df, min_enrichment, max_enrichment, min_log_pval, max_log_pval, colormap, custom_title, custom_x_label, custom_y_label, custom_legend_label)
             st.pyplot(fig)
         else:
             st.error("Data could not be loaded for plotting.")
