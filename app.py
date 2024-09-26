@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from io import BytesIO
+from matplotlib.colors import LinearSegmentedColormap
 
 # Set the title and description of the app
 st.title("Pathway Significance Visualization")
@@ -31,8 +32,12 @@ def load_data(uploaded_file):
     data.sort_values(by='-log10(p-value)', ascending=False, inplace=True)
     return data
 
+# Function to generate a custom colormap
+def generate_colormap(color1, color2):
+    return LinearSegmentedColormap.from_list('custom_cmap', [color1, color2])
+
 # Function to plot and export the chart
-def plot_and_export_chart(df, min_enrichment, max_enrichment):
+def plot_and_export_chart(df, min_enrichment, max_enrichment, colormap):
     # Filter the data to include only rows within the selected fold enrichment range
     filtered_data = df[(df['Fold Enrichment'] >= min_enrichment) & (df['Fold Enrichment'] <= max_enrichment)]
     
@@ -53,7 +58,7 @@ def plot_and_export_chart(df, min_enrichment, max_enrichment):
         x=top_10_pathways['Fold Enrichment'],
         y=top_10_pathways['Pathway'],
         c=top_10_pathways['-log10(p-value)'],
-        cmap='viridis',  # Color map for intensity
+        cmap=colormap,  # Use the custom colormap
         s=300,  # Increased size for greater emphasis
         alpha=0.85,
         marker='o',  # Circle markers
@@ -83,8 +88,21 @@ if uploaded_file is not None:
         min_enrichment = st.slider("Minimum Fold Enrichment", min_value=float(df['Fold Enrichment'].min()), max_value=float(df['Fold Enrichment'].max()), value=float(df['Fold Enrichment'].min()))
         max_enrichment = st.slider("Maximum Fold Enrichment", min_value=min_enrichment, max_value=float(df['Fold Enrichment'].max()), value=float(df['Fold Enrichment'].max()))
 
+        # Default colormap option
+        st.write("### Customize Color Palette (Optional)")
+        use_custom_colors = st.checkbox("Use Custom Colors", value=False)
+
+        if use_custom_colors:
+            # Color pickers for custom colormap
+            color1 = st.color_picker("Select First Color", value='#440154')  # Default dark purple from 'viridis'
+            color2 = st.color_picker("Select Second Color", value='#FDE725')  # Default yellow from 'viridis'
+            colormap = generate_colormap(color1, color2)
+        else:
+            # Default colormap as 'viridis'
+            colormap = 'viridis'
+
         # Plot and display the chart within the selected range
-        fig = plot_and_export_chart(df, min_enrichment, max_enrichment)
+        fig = plot_and_export_chart(df, min_enrichment, max_enrichment, colormap)
         st.pyplot(fig)
 
         # Export buttons
