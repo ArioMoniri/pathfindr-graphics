@@ -32,9 +32,20 @@ def load_data(uploaded_file):
     return data
 
 # Function to plot and export the chart
-def plot_and_export_chart(df):
+def plot_and_export_chart(df, min_enrichment, max_enrichment):
+    # Filter the data to include only rows within the selected fold enrichment range
+    filtered_data = df[(df['Fold Enrichment'] >= min_enrichment) & (df['Fold Enrichment'] <= max_enrichment)]
+    
+    # Identify pathways outside the selected range
+    outside_range = df[(df['Fold Enrichment'] < min_enrichment) | (df['Fold Enrichment'] > max_enrichment)]
+    
+    # Display pathways that cannot be visualized
+    if not outside_range.empty:
+        st.warning(f"The following pathways are outside the selected range ({min_enrichment} to {max_enrichment}):")
+        st.write(outside_range[['Pathway', 'Fold Enrichment']])
+
     # Selecting the top 10 significant pathways for visualization
-    top_10_pathways = df.head(10)
+    top_10_pathways = filtered_data.head(10)
 
     # Plotting
     plt.figure(figsize=(10, 6))
@@ -67,13 +78,18 @@ if uploaded_file is not None:
         st.write("Data loaded successfully!")
         st.dataframe(df.head(10))  # Displaying the top 10 entries for review
 
-        # Plot and display the chart
-        fig = plot_and_export_chart(df)
+        # Select the fold enrichment range
+        st.write("### Select Fold Enrichment Range")
+        min_enrichment = st.slider("Minimum Fold Enrichment", min_value=float(df['Fold Enrichment'].min()), max_value=float(df['Fold Enrichment'].max()), value=float(df['Fold Enrichment'].min()))
+        max_enrichment = st.slider("Maximum Fold Enrichment", min_value=min_enrichment, max_value=float(df['Fold Enrichment'].max()), value=float(df['Fold Enrichment'].max()))
+
+        # Plot and display the chart within the selected range
+        fig = plot_and_export_chart(df, min_enrichment, max_enrichment)
         st.pyplot(fig)
 
         # Export buttons
         st.write("### Export Chart")
-        export_as = st.selectbox("Select format to export:", ["TIFF","JPG", "PNG", "SVG"])
+        export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
 
         # Function to save the plot to a buffer and download
         def save_and_download(format, dpi=600):
