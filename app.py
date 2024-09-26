@@ -73,12 +73,12 @@ if uploaded_file is not None:
 
         # Export buttons
         st.write("### Export Chart")
-        export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG"])
+        export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
 
         # Function to save the plot to a buffer and download
-        def save_and_download(format):
+        def save_and_download(format, dpi=600):
             buffer = BytesIO()
-            fig.savefig(buffer, format=format, bbox_inches='tight', facecolor='white')
+            fig.savefig(buffer, format=format, bbox_inches='tight', facecolor='white', dpi=dpi)
             buffer.seek(0)
             plt.close(fig)  # Close the figure after saving to prevent further modifications
             return buffer
@@ -94,6 +94,12 @@ if uploaded_file is not None:
         elif export_as == "SVG":
             buffer = save_and_download("svg")
             st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
+
+        elif export_as == "TIFF":
+            # Allow user to select DPI with a default value of 600
+            dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
+            buffer = save_and_download("tiff", dpi=dpi)
+            st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
 
 else:
     st.warning("Please upload an Excel file to visualize the data.")
