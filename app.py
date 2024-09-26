@@ -73,7 +73,7 @@ if uploaded_file is not None:
 
         # Export buttons
         st.write("### Export Chart")
-        export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
+        export_as = st.selectbox("Select format to export:", ["TIFF","JPG", "PNG", "SVG"])
 
         # Function to save the plot to a buffer and download
         def save_and_download(format, dpi=600):
