@@ -97,14 +97,15 @@ if uploaded_file is not None:
         st.write("### Interactive Data Exploration with PyGWalker")
         
         # Create a resizable container for PyGWalker
-        pyg_html = StreamlitRenderer(df)
+        pygwalker = StreamlitRenderer(df)
         with st.expander("PyGWalker Visualization", expanded=True):
             container = st.container()
             with container:
-                pyg_html.render_explore()
+                pygwalker.render_explore()  # Render PyGWalker in Streamlit
         
         # Add a button to open PyGWalker in a new window
         if st.button("Open PyGWalker in New Window"):
+            # This version removes the direct access to spec_json and uses components.html correctly
             components.html(
                 f"""
                 <html>
@@ -115,13 +116,9 @@ if uploaded_file is not None:
                             <div id="pyg-container" style="width: 100%; height: 100%;"></div>
                             <script src="https://cdn.jsdelivr.net/npm/pygwalker/dist/pyg.js"></script>
                             <script>
-                                pygwalker.init('{pyg_html.spec_json}', {{
-                                    target: '#pyg-container',
-                                    dataUrl: '{pyg_html.df_json_url}',
-                                    hideDataSourceConfig: true,
-                                    themeKey: 'vega',
-                                    defaultGroupByCol: false,
-                                    defaultNumericBinning: false
+                                pygwalker.init({{
+                                    df: {df.to_json()},
+                                    target: '#pyg-container'
                                 }});
                             </script>
                         `;
