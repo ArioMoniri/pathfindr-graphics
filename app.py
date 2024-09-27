@@ -105,7 +105,7 @@ if uploaded_file is not None:
                         display: block;
                         margin-left: auto;
                         margin-right: auto;
-                        width: 80%;
+                        width: 1200px;
                         height: 800px !important;
                     }
                 </style>
