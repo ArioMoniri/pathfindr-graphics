@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
-from pygwalker.api.streamlit import StreamlitRenderer
-import streamlit.components.v1 as components
+import pygwalker as pyg
 
 # Set the title and description of the app
 st.title("Pathway Significance Visualization with PyGWalker Integration")
@@ -97,41 +96,9 @@ if uploaded_file is not None:
         st.write("### Interactive Data Exploration with PyGWalker")
         
         # Create a resizable container for PyGWalker
-        pyg_html = StreamlitRenderer(df)
         with st.expander("PyGWalker Visualization", expanded=True):
-            container = st.container()
-            with container:
-                pyg_html.render_explore()
-        
-        # Add a button to open PyGWalker in a new window
-        if st.button("Open PyGWalker in New Window"):
-            components.html(
-                f"""
-                <html>
-                <body>
-                    <script>
-                        var win = window.open("", "PyGWalker", "width=800,height=600");
-                        win.document.body.innerHTML = `
-                            <div id="pyg-container" style="width: 100%; height: 100%;"></div>
-                            <script src="https://cdn.jsdelivr.net/npm/pygwalker/dist/pyg.js"></script>
-                            <script>
-                                pygwalker.init('{pyg_html.spec_json}', {{
-                                    target: '#pyg-container',
-                                    dataUrl: '{pyg_html.df_json_url}',
-                                    hideDataSourceConfig: true,
-                                    themeKey: 'vega',
-                                    defaultGroupByCol: false,
-                                    defaultNumericBinning: false
-                                }});
-                            </script>
-                        `;
-                    </script>
-                    <p>PyGWalker opened in a new window. If it doesn't appear, please check your pop-up blocker settings.</p>
-                </body>
-                </html>
-                """,
-                height=100,
-            )
+            pyg_html = pyg.to_html(df)
+            st.components.v1.html(pyg_html, height=600, scrolling=True)
 
         # Original Visualization
         st.write("### Original Visualization")
