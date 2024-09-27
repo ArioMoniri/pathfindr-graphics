@@ -1,12 +1,13 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
+import pygwalker as pyg
 
 # Set the title and description of the app
-st.title("Pathway Significance Visualization")
+st.title("Pathway Significance Visualization with PyGWalker")
 st.write("Upload an Excel file containing columns like 'Annotation Name', 'Enrichment', and 'p-value'.")
 
 # Function to load data from an uploaded Excel file
@@ -90,6 +91,10 @@ if uploaded_file is not None:
     if df is not None:
         st.write("Data loaded successfully!")
         st.dataframe(df.head(10))  # Displaying the top 10 entries for review
+
+        # PyGWalker Integration for interactive exploration
+        st.write("### Explore Data Interactively with PyGWalker")
+        pyg.walk(df)
 
         # Select the fold enrichment range
         st.write("### Select Fold Enrichment Range")
