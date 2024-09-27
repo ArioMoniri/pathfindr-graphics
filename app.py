@@ -98,7 +98,7 @@ if uploaded_file is not None:
         # Create a larger resizable container for PyGWalker
         pygwalker = StreamlitRenderer(df)
         with st.container():
-            st.write('<style>iframe {height: 600px !important;}</style>', unsafe_allow_html=True)
+            st.write('<style>iframe {width: 100%; height: 800px !important;}</style>', unsafe_allow_html=True)
             pygwalker.render_explore()
 
         # Original Visualization
