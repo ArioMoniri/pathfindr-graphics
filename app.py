@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from io import BytesIO, StringIO
+from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
 from pygwalker.api.streamlit import StreamlitRenderer
 
@@ -94,8 +94,12 @@ if uploaded_file is not None:
 
         # PyGWalker Integration directly in Streamlit
         st.write("### Interactive Data Exploration with PyGWalker")
+        
+        # Create a larger resizable container for PyGWalker
         pygwalker = StreamlitRenderer(df)
-        pygwalker.render_explore()
+        with st.container():
+            st.write('<style>iframe {height: 600px !important;}</style>', unsafe_allow_html=True)
+            pygwalker.render_explore()
 
         # Original Visualization
         st.write("### Original Visualization")
