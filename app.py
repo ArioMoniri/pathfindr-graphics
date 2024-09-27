@@ -5,7 +5,6 @@ import numpy as np
 from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
 from pygwalker.api.streamlit import StreamlitRenderer
-import streamlit.components.v1 as components
 
 # Set the title and description of the app
 st.title("Pathway Significance Visualization with PyGWalker Integration")
@@ -96,39 +95,9 @@ if uploaded_file is not None:
         # PyGWalker Integration
         st.write("### Interactive Data Exploration with PyGWalker")
         
-        # Create a resizable container for PyGWalker
+        # Direct PyGWalker rendering within Streamlit
         pygwalker = StreamlitRenderer(df)
-        with st.expander("PyGWalker Visualization", expanded=True):
-            container = st.container()
-            with container:
-                pygwalker.render_explore()  # Render PyGWalker in Streamlit
-        
-        # Add a button to open PyGWalker in a new window
-        if st.button("Open PyGWalker in New Window"):
-            # This version removes the direct access to spec_json and uses components.html correctly
-            components.html(
-                f"""
-                <html>
-                <body>
-                    <script>
-                        var win = window.open("", "PyGWalker", "width=800,height=600");
-                        win.document.body.innerHTML = `
-                            <div id="pyg-container" style="width: 100%; height: 100%;"></div>
-                            <script src="https://cdn.jsdelivr.net/npm/pygwalker/dist/pyg.js"></script>
-                            <script>
-                                pygwalker.init({{
-                                    df: {df.to_json()},
-                                    target: '#pyg-container'
-                                }});
-                            </script>
-                        `;
-                    </script>
-                    <p>PyGWalker opened in a new window. If it doesn't appear, please check your pop-up blocker settings.</p>
-                </body>
-                </html>
-                """,
-                height=100,
-            )
+        pygwalker.render_explore()  # Render PyGWalker in Streamlit
 
         # Original Visualization
         st.write("### Original Visualization")
