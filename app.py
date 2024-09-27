@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
-import pygwalker as pyg
+import pygwalker as pyg  # Import PyGWalker for interactive exploration
 
 # Set the title and description of the app
 st.title("Pathway Significance Visualization with PyGWalker")
@@ -92,9 +92,9 @@ if uploaded_file is not None:
         st.write("Data loaded successfully!")
         st.dataframe(df.head(10))  # Displaying the top 10 entries for review
 
-        # PyGWalker Integration for interactive exploration
+        # Integrating PyGWalker for interactive data exploration
         st.write("### Explore Data Interactively with PyGWalker")
-        pyg.walk(df)
+        pyg.walk(df)  # This integrates PyGWalker
 
         # Select the fold enrichment range
         st.write("### Select Fold Enrichment Range")
