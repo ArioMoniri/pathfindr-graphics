@@ -24,13 +24,13 @@ def plot_and_export_chart(df, min_x, max_x, min_y, max_y, colormap, title, x_lab
     # Ensure that the columns for x, y, and color are numeric
     if not pd.api.types.is_numeric_dtype(df[x_col]):
         st.error(f"Column {x_col} is not numeric and cannot be used for plotting.")
-        return
+        return None
     if not pd.api.types.is_numeric_dtype(df[y_col]):
         st.error(f"Column {y_col} is not numeric and cannot be used for plotting.")
-        return
+        return None
     if not pd.api.types.is_numeric_dtype(df[color_col]):
         st.error(f"Column {color_col} is not numeric and cannot be used for coloring.")
-        return
+        return None
 
     # Sort the dataframe by the selected variable and order
     if sort_order == 'Head':
@@ -140,35 +140,37 @@ if uploaded_file is not None:
         # Plot and export the chart
         fig = plot_and_export_chart(df, min_x, max_x, min_y, max_y, colormap, custom_title, custom_x_label, custom_y_label, custom_legend_label, sort_order, sort_variable, top_n, x_col, y_col, color_col)
         
-        if fig:
+        if fig is not None:
             st.pyplot(fig)
 
-        # Export chart
-        export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
+            # Export chart
+            export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
 
-        def save_and_download(format, dpi=600):
-            buffer = BytesIO()
-            fig.savefig(buffer, format=format, bbox_inches='tight', facecolor='white', dpi=dpi)
-            buffer.seek(0)
-            plt.close(fig)
-            return buffer
+            def save_and_download(format, dpi=600):
+                buffer = BytesIO()
+                fig.savefig(buffer, format=format, bbox_inches='tight', facecolor='white', dpi=dpi)
+                buffer.seek(0)
+                plt.close(fig)
+                return buffer
 
-        if export_as == "JPG":
-            buffer = save_and_download("jpeg")
-            st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
+            if export_as == "JPG":
+                buffer = save_and_download("jpeg")
+                st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
 
-        elif export_as == "PNG":
-            buffer = save_and_download("png")
-            st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
+            elif export_as == "PNG":
+                buffer = save_and_download("png")
+                st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
 
-        elif export_as == "SVG":
-            buffer = save_and_download("svg")
-            st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
+            elif export_as == "SVG":
+                buffer = save_and_download("svg")
+                st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
 
-        elif export_as == "TIFF":
-            dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
-            buffer = save_and_download("tiff", dpi=dpi)
-            st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
+            elif export_as == "TIFF":
+                dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
+                buffer = save_and_download("tiff", dpi=dpi)
+                st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
+        else:
+            st.warning("The figure could not be created. Please check your column selections.")
 
 else:
     st.warning("Please upload an Excel file to visualize the data.")
