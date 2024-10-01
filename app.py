@@ -19,9 +19,29 @@ def load_data(uploaded_file):
 def generate_colormap(color1, color2):
     return LinearSegmentedColormap.from_list('custom_cmap', [color1, color2])
 
-# Function to add log10 transformed columns
-def add_log10_columns(df):
+# Function to handle p-values and add log10 transformed columns
+def transform_columns(df):
     numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+    
+    # P-value handling
+    pvalue_columns = st.multiselect(
+        "Select p-value columns for special handling",
+        options=numeric_columns,
+        help="These columns will be treated as p-values with careful handling of very small values"
+    )
+    
+    if pvalue_columns:
+        min_pvalue = st.number_input(
+            "Minimum p-value to consider (smaller values will be set to this)",
+            value=1e-300,
+            format="%.2e",
+            help="Values smaller than this will be treated as this value to avoid numerical issues"
+        )
+        
+        for col in pvalue_columns:
+            df[col] = df[col].clip(lower=min_pvalue)
+    
+    # Log transformations
     transform_columns = st.multiselect(
         "Select columns to apply log10 transformation",
         options=numeric_columns,
@@ -29,16 +49,21 @@ def add_log10_columns(df):
     )
     
     for col in transform_columns:
+        if col in pvalue_columns:
+            min_val = min_pvalue
+        else:
+            min_val = df[col].replace(0, np.inf).min()
+            
         new_col_name = f'log10({col})'
-        df[new_col_name] = np.log10(df[col].replace(0, np.finfo(float).tiny))
+        df[new_col_name] = np.log10(df[col].clip(lower=min_val))
         
         neg_log_col_name = f'-log10({col})'
-        df[neg_log_col_name] = -np.log10(df[col].replace(0, np.finfo(float).tiny))
+        df[neg_log_col_name] = -np.log10(df[col].clip(lower=min_val))
     
     return df
 
-# Function to plot and export the chart
-def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, sort_order, num_pathways):
+# Function to get sorted and filtered data
+def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways):
     # Filter data based on ranges
     filtered_data = df.copy()
     for col, (min_val, max_val) in ranges.items():
@@ -46,12 +71,31 @@ def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, 
             filtered_data = filtered_data[(filtered_data[col] >= min_val) & (filtered_data[col] <= max_val)]
     
     # Sort data
-    filtered_data = filtered_data.sort_values(by=sort_by, ascending=(sort_order == 'ascending'))
+    filtered_data = filtered_data.sort_values(by=sort_by)
     
-    # Select top/bottom pathways
+    # Select pathways based on method
     if num_pathways > len(filtered_data):
         num_pathways = len(filtered_data)
-    selected_data = filtered_data.head(num_pathways) if sort_order == 'descending' else filtered_data.tail(num_pathways)
+    
+    if selection_method == 'Top (Highest Values)':
+        selected_data = filtered_data.tail(num_pathways)
+    elif selection_method == 'Bottom (Lowest Values)':
+        selected_data = filtered_data.head(num_pathways)
+    elif selection_method == 'Both Ends':
+        half_num = num_pathways // 2
+        selected_data = pd.concat([
+            filtered_data.head(half_num),
+            filtered_data.tail(half_num)
+        ])
+    else:  # Middle
+        start_idx = (len(filtered_data) - num_pathways) // 2
+        selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
+    
+    return selected_data, filtered_data
+
+# Function to plot and export the chart
+def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways):
+    selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways)
 
     plt.figure(figsize=(10, 6))
     if pd.api.types.is_numeric_dtype(df[color_col]):
@@ -91,7 +135,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, 
     plt.yticks(fontsize=8)
     plt.tight_layout()
 
-    return plt.gcf(), filtered_data
+    return plt.gcf(), filtered_data, selected_data
 
 # File uploader widget
 uploaded_file = st.file_uploader("Upload your data file", type=["xlsx"])
@@ -103,8 +147,8 @@ if uploaded_file is not None:
         st.write("Data loaded successfully!")
         st.dataframe(df.head(10))
 
-        # Add log10 transformations before column selection
-        df = add_log10_columns(df)
+        # Transform columns
+        df = transform_columns(df)
         
         # Update columns list after transformations
         columns = df.columns.tolist()
@@ -124,13 +168,16 @@ if uploaded_file is not None:
                                     index=columns.index("-log10(p-value)") if "-log10(p-value)" in columns else 0)
 
         # Sorting options
-        st.write("### Sorting Options")
+        st.write("### Sorting and Selection Options")
         col1, col2, col3 = st.columns(3)
         
         with col1:
             sort_by = st.selectbox("Sort pathways by", options=columns)
         with col2:
-            sort_order = st.selectbox("Sort order", options=['descending', 'ascending'])
+            selection_method = st.selectbox(
+                "Selection method",
+                options=['Top (Highest Values)', 'Bottom (Lowest Values)', 'Both Ends', 'Middle']
+            )
         with col3:
             num_pathways = st.slider("Number of pathways to show", min_value=1, max_value=len(df), value=10)
 
@@ -180,15 +227,18 @@ if uploaded_file is not None:
 
         # Plot chart
         st.write("### Visualization")
-        fig, filtered_data = plot_and_export_chart(
+        fig, filtered_data, selected_data = plot_and_export_chart(
             df, x_col, y_col, color_col, ranges, colormap,
             custom_title, custom_x_label, custom_y_label, custom_legend_label,
-            sort_by, sort_order, num_pathways
+            sort_by, selection_method, num_pathways
         )
         st.pyplot(fig)
 
-        # Show filtered data
-        st.write("### Filtered and Sorted Data")
+        # Show filtered and selected data
+        st.write("### Selected Data for Visualization")
+        st.dataframe(selected_data)
+        
+        st.write("### All Filtered Data")
         st.dataframe(filtered_data)
 
         # PyGWalker Integration
