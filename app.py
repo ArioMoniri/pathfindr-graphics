@@ -71,12 +71,15 @@ if uploaded_file is not None:
         st.write("Data loaded successfully!")
         st.dataframe(df.head(10))
 
-        # Let user select which columns to use for Pathway, Fold Enrichment, and p-value
+        # Let user select which columns to use for X, Y, and Color axes
         columns = df.columns.tolist()
         
         x_col = st.selectbox("Select column for X-axis", options=columns, index=columns.index("Fold Enrichment") if "Fold Enrichment" in columns else 0)
         y_col = st.selectbox("Select column for Y-axis", options=columns, index=columns.index("Pathway") if "Pathway" in columns else 1)
         color_col = st.selectbox("Select column for Color", options=columns, index=columns.index("-log10(p-value)") if "-log10(p-value)" in columns else 2)
+
+        # Initialize min_x, max_x, min_y, and max_y as None
+        min_x, max_x, min_y, max_y = None, None, None, None
         
         # Sliders for dynamic ranges based on the selected X and Y columns
         if pd.api.types.is_numeric_dtype(df[x_col]):
@@ -84,12 +87,14 @@ if uploaded_file is not None:
             max_x = st.slider(f"Maximum {x_col}", min_value=min_x, max_value=float(df[x_col].max()), value=float(df[x_col].max()))
         else:
             st.write(f"Column {x_col} is not numeric, so it cannot have a range slider.")
+            min_x, max_x = df[x_col].min(), df[x_col].max()  # Set default range for non-numeric
 
         if pd.api.types.is_numeric_dtype(df[y_col]):
             min_y = st.slider(f"Minimum {y_col}", min_value=float(df[y_col].min()), max_value=float(df[y_col].max()), value=float(df[y_col].min()))
             max_y = st.slider(f"Maximum {y_col}", min_value=min_y, max_value=float(df[y_col].max()), value=float(df[y_col].max()))
         else:
             st.write(f"Column {y_col} is not numeric, so it cannot have a range slider.")
+            min_y, max_y = df[y_col].min(), df[y_col].max()  # Set default range for non-numeric
 
         # Sort options
         st.write("### Sort Options")
@@ -111,9 +116,11 @@ if uploaded_file is not None:
         custom_y_label = st.text_input("Y-axis Label", y_col)
         custom_legend_label = st.text_input("Legend Label", color_col)
 
+        # Plot and export the chart
         fig = plot_and_export_chart(df, min_x, max_x, min_y, max_y, colormap, custom_title, custom_x_label, custom_y_label, custom_legend_label, sort_order, sort_variable, top_n, x_col, y_col, color_col)
         st.pyplot(fig)
 
+        # Export chart
         export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
 
         def save_and_download(format, dpi=600):
