@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy import stats
 from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
 from pygwalker.api.streamlit import StreamlitRenderer
@@ -19,6 +18,10 @@ def load_data(uploaded_file):
 # Function to generate a custom colormap
 def generate_colormap(color1, color2):
     return LinearSegmentedColormap.from_list('custom_cmap', [color1, color2])
+
+# Function to calculate log10 with high precision
+def log10_high_precision(x):
+    return np.log10(x.astype(np.float128))
 
 # Function to handle p-values and add log10 transformed columns
 def transform_columns(df):
@@ -38,9 +41,9 @@ def transform_columns(df):
             # Convert to high precision
             high_precision_pvals = df[col].astype(np.float128)
             
-            # Calculate -log10(p-value) using scipy.stats for better precision
+            # Calculate -log10(p-value) using custom high-precision function
             neg_log_col_name = f'-log10({col})'
-            log_pvals = -stats.logpvalue(high_precision_pvals)
+            log_pvals = -log10_high_precision(high_precision_pvals)
             df[neg_log_col_name] = log_pvals
             
             # Create a regularized version of p-values for other visualizations
