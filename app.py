@@ -24,39 +24,20 @@ def generate_colormap(color1, color2):
 def transform_columns(df):
     numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
     
-    # P-value handling
+    # P-value handling: Choose the p-value columns from the menu
     pvalue_columns = st.multiselect(
-        "Select p-value columns for special handling",
+        "Select p-value columns for -log10 transformation",
         options=numeric_columns,
-        help="These columns will be treated as p-values with high-precision handling"
+        help="These columns will be treated as p-values with -log10 transformation."
     )
     
     if pvalue_columns:
-        st.info("P-values will be handled with high precision.")
+        st.info("Selected p-value columns will be transformed using -log10.")
         
         for col in pvalue_columns:
-            # Calculate -log10(p-value) manually
+            # Calculate -log10(p-value), and handle cases where p-values are zero or close to zero
             neg_log_col_name = f'-log10({col})'
             df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))  # Clip to avoid log(0)
-    
-    # Log transformations for non-p-value columns
-    other_columns = [col for col in numeric_columns if col not in pvalue_columns]
-    transform_columns = st.multiselect(
-        "Select additional columns to apply log10 transformation",
-        options=other_columns,
-        help="These columns will be transformed before visualization options"
-    )
-    
-    for col in transform_columns:
-        min_val = df[col].replace(0, np.inf).min()
-        if min_val <= 0:
-            st.warning(f"Column {col} contains zero or negative values. Adding a small constant before log transformation.")
-            offset = abs(min_val) + 1 if min_val < 0 else 1
-            new_col_name = f'log10({col}+{offset})'
-            df[new_col_name] = np.log10(df[col] + offset)
-        else:
-            new_col_name = f'log10({col})'
-            df[new_col_name] = np.log10(df[col])
     
     return df
 
