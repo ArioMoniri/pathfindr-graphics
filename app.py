@@ -21,6 +21,17 @@ def generate_colormap(color1, color2):
 
 # Function to plot and export the chart
 def plot_and_export_chart(df, min_x, max_x, min_y, max_y, colormap, title, x_label, y_label, legend_label, sort_order, sort_variable, top_n, x_col, y_col, color_col):
+    # Ensure that the columns for x, y, and color are numeric
+    if not pd.api.types.is_numeric_dtype(df[x_col]):
+        st.error(f"Column {x_col} is not numeric and cannot be used for plotting.")
+        return
+    if not pd.api.types.is_numeric_dtype(df[y_col]):
+        st.error(f"Column {y_col} is not numeric and cannot be used for plotting.")
+        return
+    if not pd.api.types.is_numeric_dtype(df[color_col]):
+        st.error(f"Column {color_col} is not numeric and cannot be used for coloring.")
+        return
+
     # Sort the dataframe by the selected variable and order
     if sort_order == 'Head':
         sorted_df = df.sort_values(by=sort_variable).head(top_n)
@@ -30,13 +41,6 @@ def plot_and_export_chart(df, min_x, max_x, min_y, max_y, colormap, title, x_lab
     # Filter the data to include only rows within the selected ranges for the x and y columns
     filtered_data = sorted_df[(sorted_df[x_col] >= min_x) & (sorted_df[x_col] <= max_x) &
                               (sorted_df[y_col] >= min_y) & (sorted_df[y_col] <= max_y)]
-
-    outside_range = sorted_df[(sorted_df[x_col] < min_x) | (sorted_df[x_col] > max_x) |
-                              (sorted_df[y_col] < min_y) | (sorted_df[y_col] > max_y)]
-
-    if not outside_range.empty:
-        st.warning(f"The following pathways are outside the selected ranges for {x_col} or {y_col}:")
-        st.write(outside_range[[x_col, y_col, color_col]])
 
     # Plotting
     plt.figure(figsize=(10, 6))
@@ -70,6 +74,23 @@ if uploaded_file is not None:
     if df is not None:
         st.write("Data loaded successfully!")
         st.dataframe(df.head(10))
+
+        # PyGWalker integration for interactive data exploration
+        st.write("### Interactive Data Exploration with PyGWalker")
+        pygwalker = StreamlitRenderer(df)
+        with st.container():
+            st.write("""
+                <style>
+                    iframe {
+                        display: block;
+                        margin-left: auto;
+                        margin-right: auto;
+                        width: 140%;
+                        height: 800px !important;
+                    }
+                </style>
+                """, unsafe_allow_html=True)
+            pygwalker.render_explore()
 
         # Let user select which columns to use for X, Y, and Color axes
         columns = df.columns.tolist()
@@ -118,7 +139,9 @@ if uploaded_file is not None:
 
         # Plot and export the chart
         fig = plot_and_export_chart(df, min_x, max_x, min_y, max_y, colormap, custom_title, custom_x_label, custom_y_label, custom_legend_label, sort_order, sort_variable, top_n, x_col, y_col, color_col)
-        st.pyplot(fig)
+        
+        if fig:
+            st.pyplot(fig)
 
         # Export chart
         export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
