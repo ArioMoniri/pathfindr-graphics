@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy import stats
 from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
 from pygwalker.api.streamlit import StreamlitRenderer
@@ -19,10 +20,6 @@ def load_data(uploaded_file):
 def generate_colormap(color1, color2):
     return LinearSegmentedColormap.from_list('custom_cmap', [color1, color2])
 
-# Function to calculate log10 with high precision
-def log10_high_precision(x):
-    return np.log10(x.astype(np.float128))
-
 # Function to handle p-values and add log10 transformed columns
 def transform_columns(df):
     numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
@@ -35,20 +32,12 @@ def transform_columns(df):
     )
     
     if pvalue_columns:
-        st.info("P-values will be handled with high precision to avoid numerical underflow issues.")
+        st.info("P-values will be handled with high precision using scipy.stats.")
         
         for col in pvalue_columns:
-            # Convert to high precision
-            high_precision_pvals = df[col].astype(np.float128)
-            
-            # Calculate -log10(p-value) using custom high-precision function
+            # Calculate -log10(p-value) using scipy.stats
             neg_log_col_name = f'-log10({col})'
-            log_pvals = -log10_high_precision(high_precision_pvals)
-            df[neg_log_col_name] = log_pvals
-            
-            # Create a regularized version of p-values for other visualizations
-            reg_col_name = f'{col}_regularized'
-            df[reg_col_name] = high_precision_pvals.clip(lower=1e-300)
+            df[neg_log_col_name] = -stats.logpvalue(df[col])
     
     # Log transformations for non-p-value columns
     other_columns = [col for col in numeric_columns if col not in pvalue_columns]
