@@ -6,4 +6,4 @@ numpy
 openpyxl
 bytesbufio
 pygwalker
-stats
+scipy
