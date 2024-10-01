@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy import stats
 from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
 from pygwalker.api.streamlit import StreamlitRenderer
@@ -27,38 +28,43 @@ def transform_columns(df):
     pvalue_columns = st.multiselect(
         "Select p-value columns for special handling",
         options=numeric_columns,
-        help="These columns will be treated as p-values with careful handling of very small values"
+        help="These columns will be treated as p-values with high-precision handling"
     )
     
     if pvalue_columns:
-        min_pvalue = st.number_input(
-            "Minimum p-value to consider (smaller values will be set to this)",
-            value=1e-300,
-            format="%.2e",
-            help="Values smaller than this will be treated as this value to avoid numerical issues"
-        )
+        st.info("P-values will be handled with high precision to avoid numerical underflow issues.")
         
         for col in pvalue_columns:
-            df[col] = df[col].clip(lower=min_pvalue)
+            # Convert to high precision
+            high_precision_pvals = df[col].astype(np.float128)
+            
+            # Calculate -log10(p-value) using scipy.stats for better precision
+            neg_log_col_name = f'-log10({col})'
+            log_pvals = -stats.logpvalue(high_precision_pvals)
+            df[neg_log_col_name] = log_pvals
+            
+            # Create a regularized version of p-values for other visualizations
+            reg_col_name = f'{col}_regularized'
+            df[reg_col_name] = high_precision_pvals.clip(lower=1e-300)
     
-    # Log transformations
+    # Log transformations for non-p-value columns
+    other_columns = [col for col in numeric_columns if col not in pvalue_columns]
     transform_columns = st.multiselect(
-        "Select columns to apply log10 transformation",
-        options=numeric_columns,
+        "Select additional columns to apply log10 transformation",
+        options=other_columns,
         help="These columns will be transformed before visualization options"
     )
     
     for col in transform_columns:
-        if col in pvalue_columns:
-            min_val = min_pvalue
+        min_val = df[col].replace(0, np.inf).min()
+        if min_val <= 0:
+            st.warning(f"Column {col} contains zero or negative values. Adding a small constant before log transformation.")
+            offset = abs(min_val) + 1 if min_val < 0 else 1
+            new_col_name = f'log10({col}+{offset})'
+            df[new_col_name] = np.log10(df[col] + offset)
         else:
-            min_val = df[col].replace(0, np.inf).min()
-            
-        new_col_name = f'log10({col})'
-        df[new_col_name] = np.log10(df[col].clip(lower=min_val))
-        
-        neg_log_col_name = f'-log10({col})'
-        df[neg_log_col_name] = -np.log10(df[col].clip(lower=min_val))
+            new_col_name = f'log10({col})'
+            df[new_col_name] = np.log10(df[col])
     
     return df
 
@@ -164,8 +170,8 @@ if uploaded_file is not None:
             y_col = st.selectbox("Select Y-axis column", options=columns, 
                                 index=columns.index("Annotation Name") if "Annotation Name" in columns else 0)
         with col3:
-            color_col = st.selectbox("Select color column", options=columns, 
-                                    index=columns.index("-log10(p-value)") if "-log10(p-value)" in columns else 0)
+            default_color_col = next((col for col in columns if col.startswith('-log10(')), columns[0])
+            color_col = st.selectbox("Select color column", options=columns, index=columns.index(default_color_col))
 
         # Sorting options
         st.write("### Sorting and Selection Options")
