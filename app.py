@@ -32,12 +32,12 @@ def transform_columns(df):
     )
     
     if pvalue_columns:
-        st.info("P-values will be handled with high precision using scipy.stats.")
+        st.info("P-values will be handled with high precision.")
         
         for col in pvalue_columns:
-            # Calculate -log10(p-value) using scipy.stats
+            # Calculate -log10(p-value) manually
             neg_log_col_name = f'-log10({col})'
-            df[neg_log_col_name] = -stats.logpvalue(df[col])
+            df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))  # Clip to avoid log(0)
     
     # Log transformations for non-p-value columns
     other_columns = [col for col in numeric_columns if col not in pvalue_columns]
@@ -135,151 +135,153 @@ def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, 
 
     return plt.gcf(), filtered_data, selected_data
 
-# File uploader widget
-uploaded_file = st.file_uploader("Upload your data file", type=["xlsx"])
+# Main execution
+if __name__ == "__main__":
+    # File uploader widget
+    uploaded_file = st.file_uploader("Upload your data file", type=["xlsx"])
 
-if uploaded_file is not None:
-    df = load_data(uploaded_file)
-    
-    if df is not None:
-        st.write("Data loaded successfully!")
-        st.dataframe(df.head(10))
-
-        # Transform columns
-        df = transform_columns(df)
+    if uploaded_file is not None:
+        df = load_data(uploaded_file)
         
-        # Update columns list after transformations
-        columns = df.columns.tolist()
+        if df is not None:
+            st.write("Data loaded successfully!")
+            st.dataframe(df.head(10))
 
-        # Column selection
-        st.write("### Select Visualization Columns")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            x_col = st.selectbox("Select X-axis column", options=columns, 
-                                index=columns.index("Enrichment") if "Enrichment" in columns else 0)
-        with col2:
-            y_col = st.selectbox("Select Y-axis column", options=columns, 
-                                index=columns.index("Annotation Name") if "Annotation Name" in columns else 0)
-        with col3:
-            default_color_col = next((col for col in columns if col.startswith('-log10(')), columns[0])
-            color_col = st.selectbox("Select color column", options=columns, index=columns.index(default_color_col))
+            # Transform columns
+            df = transform_columns(df)
+            
+            # Update columns list after transformations
+            columns = df.columns.tolist()
 
-        # Sorting options
-        st.write("### Sorting and Selection Options")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            sort_by = st.selectbox("Sort pathways by", options=columns)
-        with col2:
-            selection_method = st.selectbox(
-                "Selection method",
-                options=['Top (Highest Values)', 'Bottom (Lowest Values)', 'Both Ends', 'Middle']
-            )
-        with col3:
-            num_pathways = st.slider("Number of pathways to show", min_value=1, max_value=len(df), value=10)
-
-        # Range sliders for numeric columns
-        st.write("### Range Filters")
-        ranges = {}
-        numeric_cols = [col for col in [x_col, y_col, color_col] if pd.api.types.is_numeric_dtype(df[col])]
-        
-        for i in range(0, len(numeric_cols), 2):
-            cols = st.columns(2)
-            for j in range(2):
-                if i + j < len(numeric_cols):
-                    col = numeric_cols[i + j]
-                    with cols[j]:
-                        st.write(f"Range for {col}")
-                        min_val = float(df[col].min())
-                        max_val = float(df[col].max())
-                        ranges[col] = st.slider(
-                            f"Select range for {col}",
-                            min_value=min_val,
-                            max_value=max_val,
-                            value=(min_val, max_val)
-                        )
-
-        # Color options
-        st.write("### Visual Customization")
-        use_custom_colors = st.checkbox("Use Custom Colors", value=False)
-        if use_custom_colors:
-            col1, col2 = st.columns(2)
+            # Column selection
+            st.write("### Select Visualization Columns")
+            col1, col2, col3 = st.columns(3)
+            
             with col1:
-                color1 = st.color_picker("Select First Color", value='#440154')
+                x_col = st.selectbox("Select X-axis column", options=columns, 
+                                    index=columns.index("Enrichment") if "Enrichment" in columns else 0)
             with col2:
-                color2 = st.color_picker("Select Second Color", value='#FDE725')
-            colormap = generate_colormap(color1, color2)
-        else:
-            colormap = 'viridis'
+                y_col = st.selectbox("Select Y-axis column", options=columns, 
+                                    index=columns.index("Annotation Name") if "Annotation Name" in columns else 0)
+            with col3:
+                default_color_col = next((col for col in columns if col.startswith('-log10(')), columns[0])
+                color_col = st.selectbox("Select color column", options=columns, index=columns.index(default_color_col))
 
-        # Custom labels
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            custom_title = st.text_input("Title", "Pathway Visualization")
-        with col2:
-            custom_x_label = st.text_input("X-axis Label", x_col)
-        with col3:
-            custom_y_label = st.text_input("Y-axis Label", y_col)
-        custom_legend_label = st.text_input("Legend Label", color_col)
+            # Sorting options
+            st.write("### Sorting and Selection Options")
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                sort_by = st.selectbox("Sort pathways by", options=columns)
+            with col2:
+                selection_method = st.selectbox(
+                    "Selection method",
+                    options=['Top (Highest Values)', 'Bottom (Lowest Values)', 'Both Ends', 'Middle']
+                )
+            with col3:
+                num_pathways = st.slider("Number of pathways to show", min_value=1, max_value=len(df), value=10)
 
-        # Plot chart
-        st.write("### Visualization")
-        fig, filtered_data, selected_data = plot_and_export_chart(
-            df, x_col, y_col, color_col, ranges, colormap,
-            custom_title, custom_x_label, custom_y_label, custom_legend_label,
-            sort_by, selection_method, num_pathways
-        )
-        st.pyplot(fig)
+            # Range sliders for numeric columns
+            st.write("### Range Filters")
+            ranges = {}
+            numeric_cols = [col for col in [x_col, y_col, color_col] if pd.api.types.is_numeric_dtype(df[col])]
+            
+            for i in range(0, len(numeric_cols), 2):
+                cols = st.columns(2)
+                for j in range(2):
+                    if i + j < len(numeric_cols):
+                        col = numeric_cols[i + j]
+                        with cols[j]:
+                            st.write(f"Range for {col}")
+                            min_val = float(df[col].min())
+                            max_val = float(df[col].max())
+                            ranges[col] = st.slider(
+                                f"Select range for {col}",
+                                min_value=min_val,
+                                max_value=max_val,
+                                value=(min_val, max_val)
+                            )
 
-        # Show filtered and selected data
-        st.write("### Selected Data for Visualization")
-        st.dataframe(selected_data)
-        
-        st.write("### All Filtered Data")
-        st.dataframe(filtered_data)
+            # Color options
+            st.write("### Visual Customization")
+            use_custom_colors = st.checkbox("Use Custom Colors", value=False)
+            if use_custom_colors:
+                col1, col2 = st.columns(2)
+                with col1:
+                    color1 = st.color_picker("Select First Color", value='#440154')
+                with col2:
+                    color2 = st.color_picker("Select Second Color", value='#FDE725')
+                colormap = generate_colormap(color1, color2)
+            else:
+                colormap = 'viridis'
 
-        # PyGWalker Integration
-        st.write("### Interactive Data Exploration with PyGWalker")
-        pygwalker = StreamlitRenderer(df)
-        with st.container():
-            st.write("""
-                <style>
-                    iframe {
-                        display: block;
-                        margin-left: auto;
-                        margin-right: auto;
-                        width: 140%;
-                        height: 800px !important;
-                    }
-                </style>
-                """, unsafe_allow_html=True)
-            pygwalker.render_explore()
+            # Custom labels
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                custom_title = st.text_input("Title", "Pathway Visualization")
+            with col2:
+                custom_x_label = st.text_input("X-axis Label", x_col)
+            with col3:
+                custom_y_label = st.text_input("Y-axis Label", y_col)
+            custom_legend_label = st.text_input("Legend Label", color_col)
 
-        # Export options
-        st.write("### Export Options")
-        export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
+            # Plot chart
+            st.write("### Visualization")
+            fig, filtered_data, selected_data = plot_and_export_chart(
+                df, x_col, y_col, color_col, ranges, colormap,
+                custom_title, custom_x_label, custom_y_label, custom_legend_label,
+                sort_by, selection_method, num_pathways
+            )
+            st.pyplot(fig)
 
-        def save_and_download(format, dpi=600):
-            buffer = BytesIO()
-            fig.savefig(buffer, format=format, bbox_inches='tight', facecolor='white', dpi=dpi)
-            buffer.seek(0)
-            plt.close(fig)
-            return buffer
+            # Show filtered and selected data
+            st.write("### Selected Data for Visualization")
+            st.dataframe(selected_data)
+            
+            st.write("### All Filtered Data")
+            st.dataframe(filtered_data)
 
-        if export_as == "JPG":
-            buffer = save_and_download("jpeg")
-            st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
-        elif export_as == "PNG":
-            buffer = save_and_download("png")
-            st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
-        elif export_as == "SVG":
-            buffer = save_and_download("svg")
-            st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
-        elif export_as == "TIFF":
-            dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
-            buffer = save_and_download("tiff", dpi=dpi)
-            st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
+            # PyGWalker Integration
+            st.write("### Interactive Data Exploration with PyGWalker")
+            pygwalker = StreamlitRenderer(df)
+            with st.container():
+                st.write("""
+                    <style>
+                        iframe {
+                            display: block;
+                            margin-left: auto;
+                            margin-right: auto;
+                            width: 140%;
+                            height: 800px !important;
+                        }
+                    </style>
+                    """, unsafe_allow_html=True)
+                pygwalker.render_explore()
 
-else:
-    st.warning("Please upload an Excel file to visualize the data.")
+            # Export options
+            st.write("### Export Options")
+            export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
+
+            def save_and_download(format, dpi=600):
+                buffer = BytesIO()
+                fig.savefig(buffer, format=format, bbox_inches='tight', facecolor='white', dpi=dpi)
+                buffer.seek(0)
+                plt.close(fig)
+                return buffer
+
+            if export_as == "JPG":
+                buffer = save_and_download("jpeg")
+                st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
+            elif export_as == "PNG":
+                buffer = save_and_download("png")
+                st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
+            elif export_as == "SVG":
+                buffer = save_and_download("svg")
+                st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
+            elif export_as == "TIFF":
+                dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
+                buffer = save_and_download("tiff", dpi=dpi)
+                st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
+
+    else:
+        st.warning("Please upload an Excel file to visualize the data.")
