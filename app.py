@@ -214,9 +214,7 @@ if __name__ == "__main__":
 
             # Size and opacity options
             st.write("### Additional Circle Customization Options")
-            col1, col2
-
- = st.columns(2)
+            col1, col2 = st.columns(2)
             with col1:
                 size_col = st.selectbox("Select size column (optional)", options=["None"] + columns)
             with col2:
