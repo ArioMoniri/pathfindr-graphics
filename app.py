@@ -181,7 +181,7 @@ if __name__ == "__main__":
             # Range sliders for numeric columns
             st.write("### Range Filters")
             ranges = {}
-            numeric_cols = [col for col in [x_col, y_col, color_col, size_col, opacity_col] if pd.api.types.is_numeric_dtype(df[col])]
+            numeric_cols = [col for col in [x_col, y_col, color_col, size_col, opacity_col] if col != "None" and pd.api.types.is_numeric_dtype(df[col])]
             
             for i in range(0, len(numeric_cols), 2):
                 cols = st.columns(2)
