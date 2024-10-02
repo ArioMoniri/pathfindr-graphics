@@ -72,7 +72,7 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     return selected_data, filtered_data
 
 # Function to plot and export the chart
-def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways, fig_width, fig_height, min_size, max_size, min_opacity, max_opacity, size_increase, opacity_increase, show_size_legend, show_opacity_legend):
+def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways, fig_width, fig_height, min_size, max_size, min_opacity, max_opacity, size_increase, opacity_increase, size_factor, opacity_factor, show_size_legend, show_opacity_legend):
     selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways)
 
     # Ensure minimum figure dimensions
@@ -80,7 +80,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     fig_width = max(fig_width, min_width)
     fig_height = max(fig_height, min_height)
 
-    # Create the figure without constrained_layout
+    # Create the figure
     plt.clf()  # Clear any existing plots
     fig = plt.figure(figsize=(fig_width, fig_height))
     ax = fig.add_subplot(111)
@@ -88,7 +88,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     # Handle size values
     if size_col != "None":
         size_data = pd.to_numeric(selected_data[size_col], errors='coerce').fillna(300)
-        size_data = np.clip(size_data, min_size, max_size)
+        size_data = np.clip(size_data * size_factor, min_size, max_size)  # Apply size factor
         if not size_increase:
             size_data = max_size - (size_data - min_size)  # Invert size scaling
     else:
@@ -97,7 +97,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     # Handle opacity values
     if opacity_col != "None":
         opacity_data = pd.to_numeric(selected_data[opacity_col], errors='coerce').fillna(0.85)
-        opacity_data = np.clip(opacity_data, min_opacity, max_opacity)
+        opacity_data = np.clip(opacity_data * opacity_factor, min_opacity, max_opacity)  # Apply opacity factor
         if not opacity_increase:
             opacity_data = max_opacity - (opacity_data - min_opacity)  # Invert opacity scaling
     else:
@@ -124,7 +124,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             
             if opacity_col != "None":
                 category_opacity = pd.to_numeric(category_data[opacity_col], errors='coerce').fillna(0.85)
-                category_opacity = np.clip(category_opacity, min_opacity, max_opacity)
+                category_opacity = np.clip(category_opacity * opacity_factor, min_opacity, max_opacity)
                 if not opacity_increase:
                     category_opacity = max_opacity - (category_opacity - min_opacity)
             else:
@@ -132,7 +132,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                 
             if size_col != "None":
                 category_size = pd.to_numeric(category_data[size_col], errors='coerce').fillna(300)
-                category_size = np.clip(category_size, min_size, max_size)
+                category_size = np.clip(category_size * size_factor, min_size, max_size)
                 if not size_increase:
                     category_size = max_size - (category_size - min_size)
             else:
@@ -161,18 +161,24 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     # Use tight_layout to adjust layout
     fig.tight_layout()
 
-    # Add size and opacity legends if enabled
+    # Add size and opacity legends if enabled (compact and descriptive)
     if show_size_legend and size_col != "None":
-        handles, labels = ax.get_legend_handles_labels()
-        size_legend = plt.Line2D([], [], color='black', marker='o', markersize=10, label='Size Legend', lw=0)
-        handles.append(size_legend)
-        ax.legend(handles=handles, loc='upper right', title="Size Legend")
+        size_legend_patches = [
+            plt.Line2D([0], [0], marker='o', color='w', label=f'Size: {min_size}',
+                       markerfacecolor='gray', markersize=5),
+            plt.Line2D([0], [0], marker='o', color='w', label=f'Size: {max_size}',
+                       markerfacecolor='gray', markersize=15)
+        ]
+        ax.legend(handles=size_legend_patches, loc='upper right', title="Size Legend", fontsize='small', title_fontsize='small')
         
     if show_opacity_legend and opacity_col != "None":
-        handles, labels = ax.get_legend_handles_labels()
-        opacity_legend = plt.Line2D([], [], color='black', marker='o', alpha=0.5, markersize=10, label='Opacity Legend', lw=0)
-        handles.append(opacity_legend)
-        ax.legend(handles=handles, loc='upper left', title="Opacity Legend")
+        opacity_legend_patches = [
+            plt.Line2D([0], [0], marker='o', color='w', label=f'Opacity: {min_opacity:.2f}',
+                       markerfacecolor='gray', markersize=10, alpha=min_opacity),
+            plt.Line2D([0], [0], marker='o', color='w', label=f'Opacity: {max_opacity:.2f}',
+                       markerfacecolor='gray', markersize=10, alpha=max_opacity)
+        ]
+        ax.legend(handles=opacity_legend_patches, loc='upper left', title="Opacity Legend", fontsize='small', title_fontsize='small')
     
     return fig, filtered_data, selected_data
 
@@ -231,6 +237,14 @@ if __name__ == "__main__":
                 min_opacity = st.slider("Min opacity", min_value=0.0, max_value=1.0, value=0.5)
             with col4:
                 max_opacity = st.slider("Max opacity", min_value=0.0, max_value=1.0, value=1.0)
+
+            # Sensitivity for size and opacity
+            st.write("### Sensitivity for Size and Opacity Changes")
+            col1, col2 = st.columns(2)
+            with col1:
+                size_factor = st.slider("Size change factor", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
+            with col2:
+                opacity_factor = st.slider("Opacity change factor", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
 
             # Options to increase or decrease size and opacity
             st.write("### Size and Opacity Scaling Options")
@@ -321,7 +335,7 @@ if __name__ == "__main__":
             fig, filtered_data, selected_data = plot_and_export_chart(
                 df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
                 custom_title, custom_x_label, custom_y_label, custom_legend_label,
-                sort_by, selection_method, num_pathways, fig_width, fig_height, min_size, max_size, min_opacity, max_opacity, size_increase, opacity_increase, show_size_legend, show_opacity_legend
+                sort_by, selection_method, num_pathways, fig_width, fig_height, min_size, max_size, min_opacity, max_opacity, size_increase, opacity_increase, size_factor, opacity_factor, show_size_legend, show_opacity_legend
             )
             display_plot(fig)
 
