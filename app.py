@@ -80,9 +80,9 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     fig_width = max(fig_width, min_width)
     fig_height = max(fig_height, min_height)
 
-    # Create the figure with constrained layout
+    # Create the figure without constrained_layout
     plt.clf()  # Clear any existing plots
-    fig = plt.figure(figsize=(fig_width, fig_height), constrained_layout=True)
+    fig = plt.figure(figsize=(fig_width, fig_height))
     ax = fig.add_subplot(111)
 
     # Handle size values
@@ -146,6 +146,9 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     if isinstance(df[y_col].dtype, pd.CategoricalDtype) or df[y_col].dtype == object:
         ax.invert_yaxis()
     ax.tick_params(axis='y', labelsize=8)
+
+    # Use tight_layout to adjust layout
+    fig.tight_layout()
     
     return fig, filtered_data, selected_data
 
