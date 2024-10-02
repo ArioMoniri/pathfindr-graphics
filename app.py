@@ -5,7 +5,7 @@ import numpy as np
 from scipy import stats
 from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
-from pygwalker.api.streamlit import StreamlitRenderer
+from pygwalker.api.streamlit import init_streamlit_comm, StreamlitRenderer
 
 # Set the title and description of the app
 st.title("Pathway Significance Visualization with PyGWalker Integration")
@@ -76,9 +76,9 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
 def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways):
     selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways)
 
-    plt.figure(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 6))
     if pd.api.types.is_numeric_dtype(df[color_col]):
-        scatter = plt.scatter(
+        scatter = ax.scatter(
             x=selected_data[x_col],
             y=selected_data[y_col],
             c=selected_data[color_col],
@@ -91,10 +91,10 @@ def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, 
         plt.colorbar(scatter, label=legend_label)
     else:
         unique_categories = df[color_col].unique()
-        colors = plt.cm.get_cmap(colormap)(np.linspace(0, 1, len(unique_categories)))
+        colors = plt.colormaps.get_cmap(colormap)(np.linspace(0, 1, len(unique_categories)))
         for category, color in zip(unique_categories, colors):
             category_data = selected_data[selected_data[color_col] == category]
-            plt.scatter(
+            ax.scatter(
                 x=category_data[x_col],
                 y=category_data[y_col],
                 label=category,
@@ -104,17 +104,17 @@ def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, 
                 marker='o',
                 edgecolor='black'
             )
-        plt.legend()
+        ax.legend()
 
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    plt.title(title)
-    if pd.api.types.is_categorical_dtype(df[y_col]) or pd.api.types.is_object_dtype(df[y_col]):
-        plt.gca().invert_yaxis()
-    plt.yticks(fontsize=8)
-    plt.tight_layout()
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_title(title)
+    if isinstance(df[y_col].dtype, pd.CategoricalDtype) or df[y_col].dtype == object:
+        ax.invert_yaxis()
+    ax.tick_params(axis='y', labelsize=8)
+    fig.tight_layout()
 
-    return plt.gcf(), filtered_data, selected_data
+    return fig, filtered_data, selected_data
 
 # Main execution
 if __name__ == "__main__":
@@ -224,6 +224,7 @@ if __name__ == "__main__":
 
             # PyGWalker Integration
             st.write("### Interactive Data Exploration with PyGWalker")
+            init_streamlit_comm()
             pygwalker = StreamlitRenderer(df)
             with st.container():
                 st.write("""
@@ -237,7 +238,7 @@ if __name__ == "__main__":
                         }
                     </style>
                     """, unsafe_allow_html=True)
-                pygwalker.render_explore()
+                pygwalker.explorer()
 
             # Export options
             st.write("### Export Options")
