@@ -13,8 +13,12 @@ st.write("Upload an Excel file and customize your visualization.")
 
 # Function to load data from an uploaded Excel file
 def load_data(uploaded_file):
-    data = pd.read_excel(uploaded_file)
-    return data
+    try:
+        data = pd.read_excel(uploaded_file)
+        return data
+    except Exception as e:
+        st.error(f"Error loading file: {str(e)}")
+        return None
 
 # Function to generate a custom colormap
 def generate_colormap(color1, color2):
@@ -24,7 +28,6 @@ def generate_colormap(color1, color2):
 def transform_columns(df):
     numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
     
-    # P-value handling: Choose the p-value columns from the menu
     pvalue_columns = st.multiselect(
         "Select p-value columns for -log10 transformation",
         options=numeric_columns,
@@ -35,24 +38,20 @@ def transform_columns(df):
         st.info("Selected p-value columns will be transformed using -log10.")
         
         for col in pvalue_columns:
-            # Calculate -log10(p-value), and handle cases where p-values are zero or close to zero
             neg_log_col_name = f'-log10({col})'
-            df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))  # Clip to avoid log(0)
+            df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
     
     return df
 
 # Function to get sorted and filtered data
 def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways):
-    # Filter data based on ranges
     filtered_data = df.copy()
     for col, (min_val, max_val) in ranges.items():
         if pd.api.types.is_numeric_dtype(df[col]):
             filtered_data = filtered_data[(filtered_data[col] >= min_val) & (filtered_data[col] <= max_val)]
     
-    # Sort data
     filtered_data = filtered_data.sort_values(by=sort_by)
     
-    # Select pathways based on method
     if num_pathways > len(filtered_data):
         num_pathways = len(filtered_data)
     
@@ -76,16 +75,22 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways, fig_width, fig_height):
     selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways)
 
-    # Create the figure
-    plt.figure(figsize=(fig_width, fig_height))
-    ax = plt.gca()
+    # Ensure minimum figure dimensions
+    min_width, min_height = 6, 4
+    fig_width = max(fig_width, min_width)
+    fig_height = max(fig_height, min_height)
+
+    # Create the figure with constrained layout
+    plt.clf()  # Clear any existing plots
+    fig = plt.figure(figsize=(fig_width, fig_height), constrained_layout=True)
+    ax = fig.add_subplot(111)
 
     # Handle size values
     if size_col != "None":
         size_data = pd.to_numeric(selected_data[size_col], errors='coerce').fillna(300)
     else:
-        size_data = 300  # Default size
-    
+        size_data = 300
+
     # Handle opacity values
     if opacity_col != "None":
         opacity_data = pd.to_numeric(selected_data[opacity_col], errors='coerce').fillna(0.85)
@@ -104,7 +109,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             marker='o',
             edgecolor='black'
         )
-        plt.colorbar(scatter, label=legend_label)
+        cbar = fig.colorbar(scatter, ax=ax)
+        cbar.set_label(legend_label)
     else:
         unique_categories = df[color_col].unique()
         colors = plt.colormaps[colormap](np.linspace(0, 1, len(unique_categories)))
@@ -141,14 +147,17 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax.invert_yaxis()
     ax.tick_params(axis='y', labelsize=8)
     
-    # Adjust layout
-    plt.tight_layout()
-    
-    return plt.gcf(), filtered_data, selected_data
+    return fig, filtered_data, selected_data
+
+# Function to display the plot in Streamlit
+def display_plot(fig):
+    buf = BytesIO()
+    fig.savefig(buf, format="png", bbox_inches='tight', dpi=300)
+    buf.seek(0)
+    st.image(buf)
 
 # Main execution
 if __name__ == "__main__":
-    # File uploader widget
     uploaded_file = st.file_uploader("Upload your data file", type=["xlsx"])
 
     if uploaded_file is not None:
@@ -160,8 +169,6 @@ if __name__ == "__main__":
 
             # Transform columns
             df = transform_columns(df)
-            
-            # Update columns list after transformations
             columns = df.columns.tolist()
 
             # Column selection
@@ -260,7 +267,7 @@ if __name__ == "__main__":
                 custom_title, custom_x_label, custom_y_label, custom_legend_label,
                 sort_by, selection_method, num_pathways, fig_width, fig_height
             )
-            st.pyplot(fig)
+            display_plot(fig)
 
             # Show filtered and selected data
             st.write("### Selected Data for Visualization")
@@ -293,7 +300,7 @@ if __name__ == "__main__":
 
             def save_and_download(format, dpi=600):
                 buffer = BytesIO()
-                plt.savefig(buffer, format=format, dpi=dpi, bbox_inches='tight')
+                fig.savefig(buffer, format=format, dpi=dpi, bbox_inches='tight')
                 buffer.seek(0)
                 plt.close()
                 return buffer
