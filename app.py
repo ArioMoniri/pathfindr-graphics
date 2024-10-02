@@ -73,11 +73,12 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     return selected_data, filtered_data
 
 # Function to plot and export the chart
-def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways):
+def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways, fig_width, fig_height):
     selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways)
 
-    # Create the figure with constrained layout
-    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
+    # Create the figure
+    plt.figure(figsize=(fig_width, fig_height))
+    ax = plt.gca()
 
     # Handle size values
     if size_col != "None":
@@ -87,12 +88,10 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     
     # Handle opacity values
     if opacity_col != "None":
-        # Convert opacity column to numeric, replace non-numeric values with 0.85
         opacity_data = pd.to_numeric(selected_data[opacity_col], errors='coerce').fillna(0.85)
-        # Clip opacity values between 0 and 1
         opacity_data = opacity_data.clip(0, 1)
     else:
-        opacity_data = 0.85  # Default opacity
+        opacity_data = 0.85
 
     if pd.api.types.is_numeric_dtype(df[color_col]):
         scatter = ax.scatter(
@@ -112,13 +111,11 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         for category, color in zip(unique_categories, colors):
             category_data = selected_data[selected_data[color_col] == category]
             
-            # Handle opacity for each category
             if opacity_col != "None":
                 category_opacity = pd.to_numeric(category_data[opacity_col], errors='coerce').fillna(0.85).clip(0, 1)
             else:
                 category_opacity = 0.85
                 
-            # Handle size for each category
             if size_col != "None":
                 category_size = pd.to_numeric(category_data[size_col], errors='coerce').fillna(300)
             else:
@@ -134,19 +131,20 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                 marker='o',
                 edgecolor='black'
             )
-        ax.legend()
+        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     ax.set_title(title)
+    
     if isinstance(df[y_col].dtype, pd.CategoricalDtype) or df[y_col].dtype == object:
         ax.invert_yaxis()
     ax.tick_params(axis='y', labelsize=8)
     
-    # Manually adjust layout margins if needed
-    plt.subplots_adjust(bottom=0.2, top=0.9)
-
-    return fig, filtered_data, selected_data
+    # Adjust layout
+    plt.tight_layout()
+    
+    return plt.gcf(), filtered_data, selected_data
 
 # Main execution
 if __name__ == "__main__":
@@ -202,6 +200,14 @@ if __name__ == "__main__":
             with col3:
                 num_pathways = st.slider("Number of pathways to show", min_value=1, max_value=len(df), value=10)
 
+            # Figure size options
+            st.write("### Figure Size")
+            col1, col2 = st.columns(2)
+            with col1:
+                fig_width = st.slider("Figure width", min_value=6, max_value=20, value=12)
+            with col2:
+                fig_height = st.slider("Figure height", min_value=4, max_value=16, value=8)
+
             # Range sliders for numeric columns
             st.write("### Range Filters")
             ranges = {}
@@ -252,7 +258,7 @@ if __name__ == "__main__":
             fig, filtered_data, selected_data = plot_and_export_chart(
                 df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
                 custom_title, custom_x_label, custom_y_label, custom_legend_label,
-                sort_by, selection_method, num_pathways
+                sort_by, selection_method, num_pathways, fig_width, fig_height
             )
             st.pyplot(fig)
 
@@ -287,9 +293,9 @@ if __name__ == "__main__":
 
             def save_and_download(format, dpi=600):
                 buffer = BytesIO()
-                fig.savefig(buffer, format=format, bbox_inches='tight', facecolor='white', dpi=dpi)
+                plt.savefig(buffer, format=format, dpi=dpi, bbox_inches='tight')
                 buffer.seek(0)
-                plt.close(fig)
+                plt.close()
                 return buffer
 
             if export_as == "JPG":
