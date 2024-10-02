@@ -73,11 +73,15 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     return selected_data, filtered_data
 
 # Function to plot and export the chart
-def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways):
+def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways):
     selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways)
 
     # Create the figure with constrained layout
     fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
+
+    # Set default values for size and opacity if not selected
+    size_data = selected_data[size_col] if size_col != "None" else 300  # Default size
+    opacity_data = selected_data[opacity_col] if opacity_col != "None" else 0.85  # Default opacity
     
     if pd.api.types.is_numeric_dtype(df[color_col]):
         scatter = ax.scatter(
@@ -85,8 +89,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, 
             y=selected_data[y_col],
             c=selected_data[color_col],
             cmap=colormap,
-            s=300,
-            alpha=0.85,
+            s=size_data,
+            alpha=opacity_data,
             marker='o',
             edgecolor='black'
         )
@@ -101,8 +105,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, 
                 y=category_data[y_col],
                 label=category,
                 color=color,
-                s=300,
-                alpha=0.85,
+                s=size_data if size_col != "None" else 300,
+                alpha=opacity_data if opacity_col != "None" else 0.85,
                 marker='o',
                 edgecolor='black'
             )
@@ -150,7 +154,15 @@ if __name__ == "__main__":
                                     index=columns.index("Annotation Name") if "Annotation Name" in columns else 0)
             with col3:
                 default_color_col = next((col for col in columns if col.startswith('-log10(')), columns[0])
-                color_col = st.selectbox("Select color column", options=columns, index=columns.index(default_color_col))
+                color_col = st.selectbox("Select color column", options=["None"] + columns, index=columns.index(default_color_col))
+
+            # Size and opacity options
+            st.write("### Additional Circle Customization Options")
+            col1, col2 = st.columns(2)
+            with col1:
+                size_col = st.selectbox("Select size column (optional)", options=["None"] + columns)
+            with col2:
+                opacity_col = st.selectbox("Select opacity column (optional)", options=["None"] + columns)
 
             # Sorting options
             st.write("### Sorting and Selection Options")
@@ -169,7 +181,7 @@ if __name__ == "__main__":
             # Range sliders for numeric columns
             st.write("### Range Filters")
             ranges = {}
-            numeric_cols = [col for col in [x_col, y_col, color_col] if pd.api.types.is_numeric_dtype(df[col])]
+            numeric_cols = [col for col in [x_col, y_col, color_col, size_col, opacity_col] if pd.api.types.is_numeric_dtype(df[col])]
             
             for i in range(0, len(numeric_cols), 2):
                 cols = st.columns(2)
@@ -213,7 +225,7 @@ if __name__ == "__main__":
             # Plot chart
             st.write("### Visualization")
             fig, filtered_data, selected_data = plot_and_export_chart(
-                df, x_col, y_col, color_col, ranges, colormap,
+                df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
                 custom_title, custom_x_label, custom_y_label, custom_legend_label,
                 sort_by, selection_method, num_pathways
             )
