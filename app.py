@@ -76,7 +76,9 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
 def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways):
     selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways)
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    # Create the figure with constrained layout
+    fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
+    
     if pd.api.types.is_numeric_dtype(df[color_col]):
         scatter = ax.scatter(
             x=selected_data[x_col],
@@ -113,15 +115,9 @@ def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, 
         ax.invert_yaxis()
     ax.tick_params(axis='y', labelsize=8)
     
-    # Adjust layout
-    plt.tight_layout()
-    
-    # Check if tight_layout was successful
-    renderer = fig.canvas.get_renderer()
-    tight_bbox = fig.get_tightbbox(renderer)
-    if tight_bbox is None:
-        st.warning("Tight layout could not be applied. The plot may have overlapping elements.")
-    
+    # Manually adjust layout margins if needed
+    plt.subplots_adjust(bottom=0.2, top=0.9)
+
     return fig, filtered_data, selected_data
 
 # Main execution
