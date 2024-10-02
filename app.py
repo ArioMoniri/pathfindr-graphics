@@ -79,10 +79,21 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     # Create the figure with constrained layout
     fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
 
-    # Set default values for size and opacity if not selected
-    size_data = selected_data[size_col] if size_col != "None" else 300  # Default size
-    opacity_data = selected_data[opacity_col] if opacity_col != "None" else 0.85  # Default opacity
+    # Handle size values
+    if size_col != "None":
+        size_data = pd.to_numeric(selected_data[size_col], errors='coerce').fillna(300)
+    else:
+        size_data = 300  # Default size
     
+    # Handle opacity values
+    if opacity_col != "None":
+        # Convert opacity column to numeric, replace non-numeric values with 0.85
+        opacity_data = pd.to_numeric(selected_data[opacity_col], errors='coerce').fillna(0.85)
+        # Clip opacity values between 0 and 1
+        opacity_data = opacity_data.clip(0, 1)
+    else:
+        opacity_data = 0.85  # Default opacity
+
     if pd.api.types.is_numeric_dtype(df[color_col]):
         scatter = ax.scatter(
             x=selected_data[x_col],
@@ -100,13 +111,26 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         colors = plt.colormaps[colormap](np.linspace(0, 1, len(unique_categories)))
         for category, color in zip(unique_categories, colors):
             category_data = selected_data[selected_data[color_col] == category]
+            
+            # Handle opacity for each category
+            if opacity_col != "None":
+                category_opacity = pd.to_numeric(category_data[opacity_col], errors='coerce').fillna(0.85).clip(0, 1)
+            else:
+                category_opacity = 0.85
+                
+            # Handle size for each category
+            if size_col != "None":
+                category_size = pd.to_numeric(category_data[size_col], errors='coerce').fillna(300)
+            else:
+                category_size = 300
+                
             ax.scatter(
                 x=category_data[x_col],
                 y=category_data[y_col],
                 label=category,
                 color=color,
-                s=size_data if size_col != "None" else 300,
-                alpha=opacity_data if opacity_col != "None" else 0.85,
+                s=category_size,
+                alpha=category_opacity,
                 marker='o',
                 edgecolor='black'
             )
@@ -154,7 +178,7 @@ if __name__ == "__main__":
                                     index=columns.index("Annotation Name") if "Annotation Name" in columns else 0)
             with col3:
                 default_color_col = next((col for col in columns if col.startswith('-log10(')), columns[0])
-                color_col = st.selectbox("Select color column", options=["None"] + columns, index=columns.index(default_color_col))
+                color_col = st.selectbox("Select color column", options=columns, index=columns.index(default_color_col))
 
             # Size and opacity options
             st.write("### Additional Circle Customization Options")
@@ -181,7 +205,8 @@ if __name__ == "__main__":
             # Range sliders for numeric columns
             st.write("### Range Filters")
             ranges = {}
-            numeric_cols = [col for col in [x_col, y_col, color_col, size_col, opacity_col] if col != "None" and pd.api.types.is_numeric_dtype(df[col])]
+            numeric_cols = [col for col in [x_col, y_col, color_col, size_col, opacity_col] 
+                           if col != "None" and pd.api.types.is_numeric_dtype(df[col])]
             
             for i in range(0, len(numeric_cols), 2):
                 cols = st.columns(2)
