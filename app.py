@@ -44,6 +44,12 @@ def transform_columns(df):
     
     return df
 
+# Function to clean and convert data columns to numeric types
+def clean_numeric_columns(df, cols):
+    for col in cols:
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)  # Convert to numeric and replace invalid values with 0
+    return df
+
 # Function to get sorted and filtered data
 def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways):
     filtered_data = df.copy()
@@ -96,6 +102,8 @@ def create_legend(ax, min_size, max_size, min_opacity, max_opacity):
 
 # Function to normalize the data for size and opacity
 def normalize_data(data, min_val, max_val):
+    if np.max(data) == np.min(data):  # Avoid division by zero in case of constant data
+        return np.full_like(data, min_val)
     norm_data = (data - np.min(data)) / (np.max(data) - np.min(data))  # Normalize to 0-1
     return norm_data * (max_val - min_val) + min_val  # Scale to the desired range
 
@@ -131,6 +139,9 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             opacity_data = max_opacity - (opacity_data - min_opacity)  # Invert opacity scaling
     else:
         opacity_data = 0.85
+
+    # Ensure x_col and y_col are numeric
+    selected_data = clean_numeric_columns(selected_data, [x_col, y_col])
 
     if pd.api.types.is_numeric_dtype(df[color_col]):
         scatter = ax.scatter(
