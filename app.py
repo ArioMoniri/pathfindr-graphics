@@ -5,6 +5,7 @@ import numpy as np
 from scipy import stats
 from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.lines import Line2D
 from pygwalker.api.streamlit import init_streamlit_comm, StreamlitRenderer
 
 # Set the title and description of the app
@@ -72,17 +73,26 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     return selected_data, filtered_data
 
 # Function to create size and opacity legend
-def create_legend(fig, ax, min_size, max_size, min_opacity, max_opacity):
-    # Size legend
-    for size in np.linspace(min_size, max_size, 3):
-        ax.scatter([], [], s=size, edgecolor='black', color='black', label=f'Size: {int(size)}')
+def create_legend(ax, min_size, max_size, min_opacity, max_opacity):
+    # Create a separate legend for size
+    size_legend = [Line2D([0], [0], marker='o', color='w', label=f'Size: {int(size)}',
+                          markerfacecolor='gray', markersize=size, markeredgecolor='black')
+                   for size in np.linspace(min_size, max_size, 3)]
 
-    # Opacity legend
-    for opacity in np.linspace(min_opacity, max_opacity, 3):
-        ax.scatter([], [], s=100, edgecolor='black', color='black', alpha=opacity, label=f'Opacity: {opacity:.2f}')
+    size_labels = [f"Size: {int(size)}" for size in np.linspace(min_size, max_size, 3)]
 
-    # Combining legends and placing them outside
-    ax.legend(scatterpoints=1, frameon=True, labelspacing=1, loc='best')
+    # Create a separate legend for opacity
+    opacity_legend = [Line2D([0], [0], marker='o', color='gray', label=f'Opacity: {opacity:.2f}',
+                             markerfacecolor='gray', markersize=10, alpha=opacity)
+                      for opacity in np.linspace(min_opacity, max_opacity, 3)]
+
+    opacity_labels = [f"Opacity: {opacity:.2f}" for opacity in np.linspace(min_opacity, max_opacity, 3)]
+
+    # Combine legends
+    size_legend = ax.legend(size_legend, size_labels, loc='upper right', title="Size Legend", frameon=True, fontsize='small', title_fontsize='small')
+    ax.add_artist(size_legend)  # Add the size legend separately to avoid overlap
+
+    ax.legend(opacity_legend, opacity_labels, loc='upper left', title="Opacity Legend", frameon=True, fontsize='small', title_fontsize='small')
 
 # Function to plot and export the chart
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways, fig_width, fig_height, min_size, max_size, min_opacity, max_opacity, size_increase, opacity_increase, size_factor, opacity_factor):
@@ -173,7 +183,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     fig.tight_layout()
 
     # Add combined size and opacity legend
-    create_legend(fig, ax, min_size, max_size, min_opacity, max_opacity)
+    create_legend(ax, min_size, max_size, min_opacity, max_opacity)
 
     return fig, filtered_data, selected_data
 
