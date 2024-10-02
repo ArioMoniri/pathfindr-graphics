@@ -94,6 +94,11 @@ def create_legend(ax, min_size, max_size, min_opacity, max_opacity):
 
     ax.legend(opacity_legend, opacity_labels, loc='upper left', title="Opacity Legend", frameon=True, fontsize='small', title_fontsize='small')
 
+# Function to normalize the data for size and opacity
+def normalize_data(data, min_val, max_val):
+    norm_data = (data - np.min(data)) / (np.max(data) - np.min(data))  # Normalize to 0-1
+    return norm_data * (max_val - min_val) + min_val  # Scale to the desired range
+
 # Function to plot and export the chart
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways, fig_width, fig_height, min_size, max_size, min_opacity, max_opacity, size_increase, opacity_increase, size_factor, opacity_factor):
     selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways)
@@ -110,7 +115,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     # Handle size values
     if size_col != "None":
         size_data = pd.to_numeric(selected_data[size_col], errors='coerce').fillna(300)
-        size_data = np.clip(size_data * size_factor, min_size, max_size)  # Apply size factor
+        size_data = normalize_data(size_data, min_size, max_size)  # Normalize and scale size data
+        size_data *= size_factor  # Apply size factor
         if not size_increase:
             size_data = max_size - (size_data - min_size)  # Invert size scaling
     else:
@@ -119,7 +125,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     # Handle opacity values
     if opacity_col != "None":
         opacity_data = pd.to_numeric(selected_data[opacity_col], errors='coerce').fillna(0.85)
-        opacity_data = np.clip(opacity_data * opacity_factor, min_opacity, max_opacity)  # Apply opacity factor
+        opacity_data = normalize_data(opacity_data, min_opacity, max_opacity)  # Normalize and scale opacity data
+        opacity_data *= opacity_factor  # Apply opacity factor
         if not opacity_increase:
             opacity_data = max_opacity - (opacity_data - min_opacity)  # Invert opacity scaling
     else:
@@ -146,7 +153,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             
             if opacity_col != "None":
                 category_opacity = pd.to_numeric(category_data[opacity_col], errors='coerce').fillna(0.85)
-                category_opacity = np.clip(category_opacity * opacity_factor, min_opacity, max_opacity)
+                category_opacity = normalize_data(category_opacity, min_opacity, max_opacity)
                 if not opacity_increase:
                     category_opacity = max_opacity - (category_opacity - min_opacity)
             else:
@@ -154,7 +161,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                 
             if size_col != "None":
                 category_size = pd.to_numeric(category_data[size_col], errors='coerce').fillna(300)
-                category_size = np.clip(category_size * size_factor, min_size, max_size)
+                category_size = normalize_data(category_size, min_size, max_size)
                 if not size_increase:
                     category_size = max_size - (category_size - min_size)
             else:
