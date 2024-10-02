@@ -91,7 +91,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, 
         plt.colorbar(scatter, label=legend_label)
     else:
         unique_categories = df[color_col].unique()
-        colors = plt.colormaps.get_cmap(colormap)(np.linspace(0, 1, len(unique_categories)))
+        colors = plt.colormaps[colormap](np.linspace(0, 1, len(unique_categories)))
         for category, color in zip(unique_categories, colors):
             category_data = selected_data[selected_data[color_col] == category]
             ax.scatter(
@@ -112,8 +112,16 @@ def plot_and_export_chart(df, x_col, y_col, color_col, ranges, colormap, title, 
     if isinstance(df[y_col].dtype, pd.CategoricalDtype) or df[y_col].dtype == object:
         ax.invert_yaxis()
     ax.tick_params(axis='y', labelsize=8)
-    fig.tight_layout()
-
+    
+    # Adjust layout
+    plt.tight_layout()
+    
+    # Check if tight_layout was successful
+    renderer = fig.canvas.get_renderer()
+    tight_bbox = fig.get_tightbbox(renderer)
+    if tight_bbox is None:
+        st.warning("Tight layout could not be applied. The plot may have overlapping elements.")
+    
     return fig, filtered_data, selected_data
 
 # Main execution
