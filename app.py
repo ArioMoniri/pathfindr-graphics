@@ -72,7 +72,7 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     return selected_data, filtered_data
 
 # Function to plot and export the chart
-def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways, fig_width, fig_height):
+def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways, fig_width, fig_height, min_size, max_size, min_opacity, max_opacity):
     selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways)
 
     # Ensure minimum figure dimensions
@@ -88,13 +88,14 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     # Handle size values
     if size_col != "None":
         size_data = pd.to_numeric(selected_data[size_col], errors='coerce').fillna(300)
+        size_data = np.clip(size_data, min_size, max_size)  # Apply min/max size
     else:
         size_data = 300
 
     # Handle opacity values
     if opacity_col != "None":
         opacity_data = pd.to_numeric(selected_data[opacity_col], errors='coerce').fillna(0.85)
-        opacity_data = opacity_data.clip(0, 1)
+        opacity_data = np.clip(opacity_data, min_opacity, max_opacity)  # Apply min/max opacity
     else:
         opacity_data = 0.85
 
@@ -118,12 +119,14 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             category_data = selected_data[selected_data[color_col] == category]
             
             if opacity_col != "None":
-                category_opacity = pd.to_numeric(category_data[opacity_col], errors='coerce').fillna(0.85).clip(0, 1)
+                category_opacity = pd.to_numeric(category_data[opacity_col], errors='coerce').fillna(0.85)
+                category_opacity = np.clip(category_opacity, min_opacity, max_opacity)
             else:
                 category_opacity = 0.85
                 
             if size_col != "None":
                 category_size = pd.to_numeric(category_data[size_col], errors='coerce').fillna(300)
+                category_size = np.clip(category_size, min_size, max_size)
             else:
                 category_size = 300
                 
@@ -196,6 +199,18 @@ if __name__ == "__main__":
             with col2:
                 opacity_col = st.selectbox("Select opacity column (optional)", options=["None"] + columns)
 
+            # Min and max size and opacity
+            st.write("### Size and Opacity Adjustments")
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                min_size = st.slider("Min size", min_value=100, max_value=1000, value=300)
+            with col2:
+                max_size = st.slider("Max size", min_value=100, max_value=1000, value=600)
+            with col3:
+                min_opacity = st.slider("Min opacity", min_value=0.0, max_value=1.0, value=0.5)
+            with col4:
+                max_opacity = st.slider("Max opacity", min_value=0.0, max_value=1.0, value=1.0)
+
             # Sorting options
             st.write("### Sorting and Selection Options")
             col1, col2, col3 = st.columns(3)
@@ -237,7 +252,8 @@ if __name__ == "__main__":
                                 f"Select range for {col}",
                                 min_value=min_val,
                                 max_value=max_val,
-                                value=(min_val, max_val)
+                                value=(min_val, max_val),
+                                key=f"slider_{col}"  # Add a unique key for each slider
                             )
 
             # Color options
@@ -268,7 +284,7 @@ if __name__ == "__main__":
             fig, filtered_data, selected_data = plot_and_export_chart(
                 df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
                 custom_title, custom_x_label, custom_y_label, custom_legend_label,
-                sort_by, selection_method, num_pathways, fig_width, fig_height
+                sort_by, selection_method, num_pathways, fig_width, fig_height, min_size, max_size, min_opacity, max_opacity
             )
             display_plot(fig)
 
