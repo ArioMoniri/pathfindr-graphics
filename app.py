@@ -169,16 +169,20 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         if annotation_sort == 'p-value':
             sort_order = selected_data[color_col].argsort()[::-1]  # Reverse to get descending order
         elif annotation_sort == 'name_length':
-            sort_order = pd.Series(annotations).str.len().argsort()
+            sort_order = selected_data[y_col].str.len().argsort().values
         else:
             sort_order = np.arange(len(selected_data))
 
         # Sort all relevant data
-        annotations = [annotations[i] for i in sort_order]
-        x_values = x_values[sort_order]
-        y_values = np.arange(len(selected_data))
-        sizes = sizes[sort_order] if isinstance(sizes, np.ndarray) else sizes
-        opacities = opacities[sort_order] if isinstance(opacities, np.ndarray) else opacities
+        annotations = [annotations[i] for i in range(len(annotations)) if i in sort_order]
+        x_values = selected_data[x_col].values[sort_order]
+        y_values = np.arange(len(annotations))
+        
+        if isinstance(sizes, np.ndarray):
+            sizes = sizes[sort_order]
+        if isinstance(opacities, np.ndarray):
+            opacities = opacities[sort_order]
+
         selected_data = selected_data.iloc[sort_order]
 
         # Adjust figure size to accommodate long pathway names
