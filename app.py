@@ -69,7 +69,7 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     return selected_data, filtered_data
 
 # Updated create_legends function
-def create_legends(ax, sizes, opacities, size_col, opacity_col):
+def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
     legend_elements = []
     legend_labels = []
     
@@ -91,34 +91,18 @@ def create_legends(ax, sizes, opacities, size_col, opacity_col):
 
     if legend_elements:
         leg = ax.legend(legend_elements, legend_labels, loc='center left', 
-                  bbox_to_anchor=(1.05, 0.5), frameon=True, title="Size and Opacity")
-        plt.setp(leg.get_title(), multialignment='center')
+                  bbox_to_anchor=(1.05, 0.5), frameon=True, title="Size and Opacity",
+                  fontsize=legend_fontsize)
+        plt.setp(leg.get_title(), multialignment='center', fontsize=legend_fontsize)
 
-# Updated plot_and_export_chart function with improved error handling
-def transform_columns(df):
-    numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
-    
-    pvalue_columns = st.multiselect(
-        "Select p-value columns for -log10 transformation",
-        options=numeric_columns,
-        help="These columns will be treated as p-values with -log10 transformation."
-    )
-    
-    if pvalue_columns:
-        st.info("Selected p-value columns will be transformed using -log10.")
-        
-        for col in pvalue_columns:
-            neg_log_col_name = f'-log10({col})'
-            df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
-    
-    return df
-
-# Update the plot_and_export_chart function to fix the annotation issue
+# Updated plot_and_export_chart function
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, 
                          colormap, title, x_label, y_label, legend_label, sort_by, 
                          selection_method, num_pathways, fig_width, fig_height, 
                          min_size, max_size, min_opacity, max_opacity, 
-                         size_increase, opacity_increase, size_factor, opacity_factor):
+                         size_increase, opacity_increase, size_factor, opacity_factor,
+                         show_annotation_id, annotation_sort, annotation_font, annotation_size,
+                         annotation_alignment, legend_fontsize):
     try:
         selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, 
                                                                selection_method, num_pathways)
@@ -143,12 +127,10 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
 
-        # Ensure x_col and y_col are numeric, handle non-numeric (categorical) values explicitly
         x_values = pd.to_numeric(selected_data[x_col], errors='coerce').values
         if pd.api.types.is_numeric_dtype(selected_data[y_col]):
             y_values = pd.to_numeric(selected_data[y_col], errors='coerce').values
         else:
-            # Convert non-numeric y_col to categorical and assign numeric labels
             y_values = pd.Categorical(selected_data[y_col]).codes
 
         # Plot the data
@@ -160,7 +142,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                                 alpha=opacities,
                                 edgecolors='black')
             cbar = plt.colorbar(scatter, ax=ax)
-            cbar.set_label(legend_label)
+            cbar.set_label(legend_label, fontsize=legend_fontsize)
+            cbar.ax.tick_params(labelsize=legend_fontsize)
         else:
             unique_categories = selected_data[color_col].unique()
             colors = plt.get_cmap(colormap)(np.linspace(0, 1, len(unique_categories)))
@@ -173,23 +156,38 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                           s=sizes[mask] if isinstance(sizes, np.ndarray) else sizes,
                           alpha=opacities[mask] if isinstance(opacities, np.ndarray) else opacities,
                           edgecolors='black')
-            ax.legend(title=legend_label, bbox_to_anchor=(1.05, 1), loc='upper left')
+            leg = ax.legend(title=legend_label, bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=legend_fontsize)
+            plt.setp(leg.get_title(), fontsize=legend_fontsize)
 
-        # Add annotations
-        for i, txt in enumerate(selected_data.index):
-            ax.annotate(str(txt), (x_values[i], y_values[i]), xytext=(5, 5), 
-                        textcoords='offset points', ha='left', va='bottom',
-                        fontsize=8, alpha=0.7)
+        # Handle annotations
+        if show_annotation_id:
+            annotations = selected_data.index
+        else:
+            annotations = selected_data[y_col]
 
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
-        ax.set_title(title)
+        if annotation_sort == 'p-value':
+            sort_order = selected_data[color_col].argsort()
+            annotations = annotations[sort_order]
+            y_values = y_values[sort_order]
+        elif annotation_sort == 'name_length':
+            sort_order = selected_data[y_col].str.len().argsort()
+            annotations = annotations[sort_order]
+            y_values = y_values[sort_order]
+
+        ax.set_yticks(y_values)
+        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha=annotation_alignment)
+
+        ax.set_xlabel(x_label, fontsize=legend_fontsize)
+        ax.set_ylabel(y_label, fontsize=legend_fontsize)
+        ax.set_title(title, fontsize=legend_fontsize)
 
         if isinstance(y_values, np.ndarray) and y_values.dtype.kind in 'OSU':
             ax.invert_yaxis()
 
         # Create size and opacity legends
-        create_legends(ax, sizes, opacities, size_col, opacity_col)
+        create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
+
+        ax.tick_params(axis='both', which='major', labelsize=legend_fontsize)
 
         plt.tight_layout()
         return fig, filtered_data, selected_data
@@ -198,16 +196,13 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None
-# Add the display_plot function
-def display_plot(fig):
-    if fig is not None:
-        buf = BytesIO()
-        fig.savefig(buf, format="png", bbox_inches='tight', dpi=300)
-        buf.seek(0)
-        st.image(buf)
-        
+
 # Main execution
 if __name__ == "__main__":
+    st.set_page_config(layout="wide", page_title="Pathway Significance Visualization")
+    st.title("Pathway Significance Visualization with PyGWalker Integration")
+    st.write("Upload an Excel file and customize your visualization.")
+
     uploaded_file = st.file_uploader("Upload your data file", type=["xlsx"])
 
     if uploaded_file is not None:
@@ -220,34 +215,41 @@ if __name__ == "__main__":
             st.write("Data loaded successfully!")
             
             # Apply -log10 transformation
-            df = transform_columns(df)
-            
-            columns = df.columns.tolist()
-            
-            # Initialize variables
-            fig = None
-            filtered_data = None
-            selected_data = None
-            
-            # Use tabs to organize the UI
-            tab1, tab2, tab3 = st.tabs(["Data Preview", "Visualization Settings", "Results"])
+            tab1, tab2, tab3 = st.tabs(["Data Preview", "Visualization Settings", "Interactive Options"])
             
             with tab1:
                 st.dataframe(df.head(10))
+                
+                # Move p-value column selection to tab 1
+                numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+                pvalue_columns = st.multiselect(
+                    "Select p-value columns for -log10 transformation",
+                    options=numeric_columns,
+                    help="These columns will be treated as p-values with -log10 transformation."
+                )
+                
+                if pvalue_columns:
+                    st.info("Selected p-value columns will be transformed using -log10.")
+                    
+                    for col in pvalue_columns:
+                        neg_log_col_name = f'-log10({col})'
+                        df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
 
             with tab2:
                 # Move all the setting widgets here
                 with st.form("visualization_settings"):
+                    columns = df.columns.tolist()
+                    
                     # Column selection
                     st.write("### Select Visualization Columns")
                     col1, col2, col3 = st.columns(3)
                     
                     with col1:
-                        x_col = st.selectbox("Select X-axis column", options=columns)
+                        x_col = st.selectbox("Select X-axis column", options=columns, index=columns.index("Enrichment") if "Enrichment" in columns else 0)
                     with col2:
-                        y_col = st.selectbox("Select Y-axis column", options=columns)
+                        y_col = st.selectbox("Select Y-axis column", options=columns, index=columns.index("Annotation Name") if "Annotation Name" in columns else 0)
                     with col3:
-                        color_col = st.selectbox("Select color column", options=columns)
+                        color_col = st.selectbox("Select color column", options=columns, index=columns.index("-log10(p-value)") if "-log10(p-value)" in columns else 0)
 
                     # Size and opacity options
                     st.write("### Additional Circle Customization Options")
@@ -323,7 +325,6 @@ if __name__ == "__main__":
                         # Create a unique key for each column using its index
                         unique_key = f"range_slider_{i}_{col}"
                         
-                        st.write(f"Range for {col}")
                         ranges[col] = st.slider(
                             f"Select range for {col}",
                             min_value=min_val,
@@ -344,7 +345,6 @@ if __name__ == "__main__":
                         colormap = generate_colormap(color1, color2)
                     else:
                         colormap = 'viridis'
-
                     # Custom labels
                     st.write("### Custom Labels")
                     col1, col2, col3 = st.columns(3)
@@ -355,6 +355,24 @@ if __name__ == "__main__":
                     with col3:
                         custom_y_label = st.text_input("Y-axis Label", y_col)
                     custom_legend_label = st.text_input("Legend Label", color_col)
+
+                    # Annotation options
+                    st.write("### Annotation Options")
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        show_annotation_id = st.checkbox("Show ID in annotations", value=True)
+                    with col2:
+                        annotation_sort = st.selectbox("Sort annotations by", ["p-value", "name_length", "none"])
+                    with col3:
+                        annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        annotation_font = st.selectbox("Annotation font", ["Arial", "Times New Roman", "Courier"])
+                    with col2:
+                        annotation_size = st.slider("Annotation font size", 6, 20, 10)
+                    with col3:
+                        legend_fontsize = st.slider("Legend font size", 6, 20, 10)
 
                     # Submit button for form
                     submit_button = st.form_submit_button("Generate Visualization")
@@ -367,23 +385,21 @@ if __name__ == "__main__":
                         custom_title, custom_x_label, custom_y_label, custom_legend_label,
                         sort_by, selection_method, num_pathways, fig_width, fig_height, 
                         min_size, max_size, min_opacity, max_opacity, 
-                        size_increase, opacity_increase, size_factor, opacity_factor
+                        size_increase, opacity_increase, size_factor, opacity_factor,
+                        show_annotation_id, annotation_sort, annotation_font, annotation_size,
+                        annotation_alignment, legend_fontsize
                     )
                     plot_time = time.time() - start_time
                     st.write(f"Plot generation time: {plot_time:.2f} seconds")
                     if fig:
                         display_plot(fig)
-
-            with tab3:
-                # Show filtered and selected data
-                if selected_data is not None and filtered_data is not None:
+                
+                # Show selected data in tab 2
+                if selected_data is not None:
                     st.write("### Selected Data for Visualization")
                     st.dataframe(selected_data)
-                    
-                    st.write("### All Filtered Data")
-                    st.dataframe(filtered_data)
 
-                # Export options
+                # Export options in tab 2
                 if fig is not None:
                     st.write("### Export Options")
                     export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
@@ -409,7 +425,14 @@ if __name__ == "__main__":
                         buffer = save_and_download("tiff", dpi=dpi)
                         st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
 
-                # PyGWalker Integration
+                # Show discarded rows due to filtering
+                if filtered_data is not None:
+                    discarded_data = df[~df.index.isin(filtered_data.index)]
+                    if not discarded_data.empty:
+                        st.write("### Rows Discarded Due to Filtering")
+                        st.dataframe(discarded_data)
+
+            with tab3:
                 st.write("### Interactive Data Exploration with PyGWalker")
                 init_streamlit_comm()
                 pygwalker = StreamlitRenderer(df)
