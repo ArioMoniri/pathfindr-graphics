@@ -46,9 +46,27 @@ def transform_columns(df):
 
 # Function to clean and convert data columns to numeric types
 def clean_numeric_columns(df, cols):
+    result_df = df.copy()
     for col in cols:
-        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)  # Convert to numeric and replace invalid values with 0
-    return df
+        if col in result_df.columns:
+            result_df[col] = pd.to_numeric(result_df[col], errors='coerce').fillna(0)
+    return result_df
+
+# Function to normalize the data for size and opacity
+def normalize_data(data, min_val, max_val, factor=1.0, increase=True):
+    if isinstance(data, (int, float)):
+        return data
+    
+    if np.all(np.isnan(data)) or len(data) == 0 or np.max(data) == np.min(data):
+        return np.full(len(data), (min_val + max_val) / 2)
+    
+    norm_data = (data - np.min(data)) / (np.max(data) - np.min(data))
+    scaled_data = norm_data * (max_val - min_val) + min_val
+    
+    if not increase:
+        scaled_data = max_val - (scaled_data - min_val)
+    
+    return scaled_data * factor
 
 # Function to get sorted and filtered data
 def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways):
@@ -79,138 +97,118 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     return selected_data, filtered_data
 
 # Function to create size and opacity legend
-def create_legend(ax, min_size, max_size, min_opacity, max_opacity):
-    # Create a separate legend for size
-    size_legend = [Line2D([0], [0], marker='o', color='w', label=f'Size: {int(size)}',
-                          markerfacecolor='gray', markersize=size, markeredgecolor='black')
-                   for size in np.linspace(min_size, max_size, 3)]
+def create_legends(ax, sizes, opacities, size_label=None, opacity_label=None):
+    legend_elements = []
+    legend_labels = []
+    
+    # Size legend
+    if not isinstance(sizes, (int, float)):
+        unique_sizes = sorted(set([int(s) for s in sizes]))
+        if len(unique_sizes) > 1:
+            size_values = [min(unique_sizes), np.median(unique_sizes), max(unique_sizes)]
+            for size in size_values:
+                legend_elements.append(Line2D([0], [0], marker='o', color='w', 
+                                             markerfacecolor='gray', markersize=np.sqrt(size/10),
+                                             markeredgecolor='black', linestyle='None'))
+                legend_labels.append(f'{size_label}: {int(size)}' if size_label else f'Size: {int(size)}')
 
-    size_labels = [f"Size: {int(size)}" for size in np.linspace(min_size, max_size, 3)]
+    # Opacity legend
+    if not isinstance(opacities, (int, float)):
+        unique_opacities = sorted(set([round(o, 2) for o in opacities]))
+        if len(unique_opacities) > 1:
+            opacity_values = [min(unique_opacities), np.median(unique_opacities), max(unique_opacities)]
+            for opacity in opacity_values:
+                legend_elements.append(Line2D([0], [0], marker='o', color='gray',
+                                             markerfacecolor='gray', markersize=10,
+                                             alpha=opacity, linestyle='None'))
+                legend_labels.append(f'{opacity_label}: {opacity:.2f}' if opacity_label else f'Opacity: {opacity:.2f}')
 
-    # Create a separate legend for opacity
-    opacity_legend = [Line2D([0], [0], marker='o', color='gray', label=f'Opacity: {opacity:.2f}',
-                             markerfacecolor='gray', markersize=10, alpha=opacity)
-                      for opacity in np.linspace(min_opacity, max_opacity, 3)]
-
-    opacity_labels = [f"Opacity: {opacity:.2f}" for opacity in np.linspace(min_opacity, max_opacity, 3)]
-
-    # Combine legends
-    size_legend = ax.legend(size_legend, size_labels, loc='upper right', title="Size Legend", frameon=True, fontsize='small', title_fontsize='small')
-    ax.add_artist(size_legend)  # Add the size legend separately to avoid overlap
-
-    ax.legend(opacity_legend, opacity_labels, loc='upper left', title="Opacity Legend", frameon=True, fontsize='small', title_fontsize='small')
-
-# Function to normalize the data for size and opacity
-def normalize_data(data, min_val, max_val):
-    if np.max(data) == np.min(data):  # Avoid division by zero in case of constant data
-        return np.full_like(data, min_val)
-    norm_data = (data - np.min(data)) / (np.max(data) - np.min(data))  # Normalize to 0-1
-    return norm_data * (max_val - min_val) + min_val  # Scale to the desired range
+    if legend_elements:
+        ax.legend(legend_elements, legend_labels, loc='center left', 
+                 bbox_to_anchor=(1, 0.5), frameon=True)
 
 # Function to plot and export the chart
-def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap, title, x_label, y_label, legend_label, sort_by, selection_method, num_pathways, fig_width, fig_height, min_size, max_size, min_opacity, max_opacity, size_increase, opacity_increase, size_factor, opacity_factor):
-    selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways)
+def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, 
+                         colormap, title, x_label, y_label, legend_label, sort_by, 
+                         selection_method, num_pathways, fig_width, fig_height, 
+                         min_size, max_size, min_opacity, max_opacity, 
+                         size_increase, opacity_increase, size_factor, opacity_factor):
+    try:
+        selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, 
+                                                               selection_method, num_pathways)
+        
+        if selected_data.empty:
+            st.warning("No data to display after applying filters.")
+            return None, filtered_data, selected_data
 
-    # Ensure minimum figure dimensions
-    min_width, min_height = 6, 4
-    fig_width = max(fig_width, min_width)
-    fig_height = max(fig_height, min_height)
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+        
+        # Handle size values
+        if size_col != "None":
+            sizes = pd.to_numeric(selected_data[size_col], errors='coerce')
+            sizes = normalize_data(sizes, min_size, max_size, size_factor, size_increase)
+        else:
+            sizes = (min_size + max_size) / 2
+        
+        # Handle opacity values
+        if opacity_col != "None":
+            opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
+            opacities = normalize_data(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
+        else:
+            opacities = (min_opacity + max_opacity) / 2
 
-    # Create the figure
-    plt.clf()  # Clear any existing plots
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+        # Ensure x_col and y_col are numeric
+        x_values = pd.to_numeric(selected_data[x_col], errors='coerce')
+        y_values = pd.to_numeric(selected_data[y_col], errors='coerce') if pd.api.types.is_numeric_dtype(selected_data[y_col]) else selected_data[y_col]
 
-    # Handle size values
-    if size_col != "None":
-        size_data = pd.to_numeric(selected_data[size_col], errors='coerce').fillna(300)
-        size_data = normalize_data(size_data, min_size, max_size)  # Normalize and scale size data
-        size_data *= size_factor  # Apply size factor
-        if not size_increase:
-            size_data = max_size - (size_data - min_size)  # Invert size scaling
-    else:
-        size_data = 300
-
-    # Handle opacity values
-    if opacity_col != "None":
-        opacity_data = pd.to_numeric(selected_data[opacity_col], errors='coerce').fillna(0.85)
-        opacity_data = normalize_data(opacity_data, min_opacity, max_opacity)  # Normalize and scale opacity data
-        opacity_data *= opacity_factor  # Apply opacity factor
-        if not opacity_increase:
-            opacity_data = max_opacity - (opacity_data - min_opacity)  # Invert opacity scaling
-    else:
-        opacity_data = 0.85
-
-    # Ensure x_col and y_col are numeric
-    selected_data = clean_numeric_columns(selected_data, [x_col, y_col])
-
-    if pd.api.types.is_numeric_dtype(df[color_col]):
-        scatter = ax.scatter(
-            x=selected_data[x_col],
-            y=selected_data[y_col],
-            c=selected_data[color_col],
-            cmap=colormap,
-            s=size_data,
-            alpha=opacity_data,
-            marker='o',
-            edgecolor='black'
-        )
-        cbar = fig.colorbar(scatter, ax=ax)
-        cbar.set_label(legend_label)
-    else:
-        unique_categories = df[color_col].unique()
-        colors = plt.colormaps[colormap](np.linspace(0, 1, len(unique_categories)))
-        for category, color in zip(unique_categories, colors):
-            category_data = selected_data[selected_data[color_col] == category]
+        if pd.api.types.is_numeric_dtype(selected_data[color_col]):
+            scatter = ax.scatter(x_values, y_values,
+                                c=selected_data[color_col],
+                                cmap=colormap,
+                                s=sizes,
+                                alpha=opacities,
+                                edgecolors='black')
+            cbar = plt.colorbar(scatter, ax=ax)
+            cbar.set_label(legend_label)
+        else:
+            unique_categories = selected_data[color_col].unique()
+            colors = plt.colormaps[colormap](np.linspace(0, 1, len(unique_categories)))
             
-            if opacity_col != "None":
-                category_opacity = pd.to_numeric(category_data[opacity_col], errors='coerce').fillna(0.85)
-                category_opacity = normalize_data(category_opacity, min_opacity, max_opacity)
-                if not opacity_increase:
-                    category_opacity = max_opacity - (category_opacity - min_opacity)
-            else:
-                category_opacity = 0.85
-                
-            if size_col != "None":
-                category_size = pd.to_numeric(category_data[size_col], errors='coerce').fillna(300)
-                category_size = normalize_data(category_size, min_size, max_size)
-                if not size_increase:
-                    category_size = max_size - (category_size - min_size)
-            else:
-                category_size = 300
-                
-            ax.scatter(
-                x=category_data[x_col],
-                y=category_data[y_col],
-                label=category,
-                color=color,
-                s=category_size,
-                alpha=category_opacity,
-                marker='o',
-                edgecolor='black'
-            )
+            for category, color in zip(unique_categories, colors):
+                mask = selected_data[color_col] == category
+                ax.scatter(x_values[mask], y_values[mask],
+                          label=category,
+                          color=color,
+                          s=sizes[mask] if isinstance(sizes, np.ndarray) else sizes,
+                          alpha=opacities[mask] if isinstance(opacities, np.ndarray) else opacities,
+                          edgecolors='black')
+            ax.legend(title=legend_label, bbox_to_anchor=(1.05, 1), loc='upper left')
 
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
-    ax.set_title(title)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        ax.set_title(title)
 
-    if isinstance(df[y_col].dtype, pd.CategoricalDtype) or df[y_col].dtype == object:
-        ax.invert_yaxis()
-    ax.tick_params(axis='y', labelsize=8)
+        if isinstance(y_values, pd.Series) and (y_values.dtype == object or isinstance(y_values.dtype, pd.CategoricalDtype)):
+            ax.invert_yaxis()
 
-    # Use tight_layout to adjust layout
-    fig.tight_layout()
+        # Create size and opacity legends
+        create_legends(ax, sizes, opacities, 
+                      size_label=size_col if size_col != "None" else None,
+                      opacity_label=opacity_col if opacity_col != "None" else None)
 
-    # Add combined size and opacity legend
-    create_legend(ax, min_size, max_size, min_opacity, max_opacity)
-
-    return fig, filtered_data, selected_data
+        plt.tight_layout()
+        return fig, filtered_data, selected_data
+    except Exception as e:
+        st.error(f"Error creating plot: {str(e)}")
+        return None, None, None
 
 # Function to display the plot in Streamlit
 def display_plot(fig):
-    buf = BytesIO()
-    fig.savefig(buf, format="png", bbox_inches='tight', dpi=300)
-    buf.seek(0)
-    st.image(buf)
+    if fig is not None:
+        buf = BytesIO()
+        fig.savefig(buf, format="png", bbox_inches='tight', dpi=300)
+        buf.seek(0)
+        st.image(buf)
 
 # Main execution
 if __name__ == "__main__":
@@ -304,23 +302,25 @@ if __name__ == "__main__":
             ranges = {}
             numeric_cols = [col for col in [x_col, y_col, color_col, size_col, opacity_col] 
                            if col != "None" and pd.api.types.is_numeric_dtype(df[col])]
-            
-            for i in range(0, len(numeric_cols), 2):
-                cols = st.columns(2)
-                for j in range(2):
-                    if i + j < len(numeric_cols):
-                        col = numeric_cols[i + j]
-                        with cols[j]:
-                            st.write(f"Range for {col}")
-                            min_val = float(df[col].min())
-                            max_val = float(df[col].max())
-                            ranges[col] = st.slider(
-                                f"Select range for {col}",
-                                min_value=min_val,
-                                max_value=max_val,
-                                value=(min_val, max_val),
-                                key=f"slider_{col}"  # Add a unique key for each slider
-                            )
+
+            # Create a unique list of columns to avoid duplicate keys
+            unique_numeric_cols = list(dict.fromkeys(numeric_cols))
+
+            for i, col in enumerate(unique_numeric_cols):
+                min_val = float(df[col].min())
+                max_val = float(df[col].max())
+                
+                # Create a unique key for each column using its index
+                unique_key = f"range_slider_{i}_{col}"
+                
+                st.write(f"Range for {col}")
+                ranges[col] = st.slider(
+                    f"Select range for {col}",
+                    min_value=min_val,
+                    max_value=max_val,
+                    value=(min_val, max_val),
+                    key=unique_key
+                )
 
             # Color options
             st.write("### Visual Customization")
@@ -336,6 +336,7 @@ if __name__ == "__main__":
                 colormap = 'viridis'
 
             # Custom labels
+            st.write("### Custom Labels")
             col1, col2, col3 = st.columns(3)
             with col1:
                 custom_title = st.text_input("Title", "Pathway Visualization")
@@ -350,16 +351,19 @@ if __name__ == "__main__":
             fig, filtered_data, selected_data = plot_and_export_chart(
                 df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
                 custom_title, custom_x_label, custom_y_label, custom_legend_label,
-                sort_by, selection_method, num_pathways, fig_width, fig_height, min_size, max_size, min_opacity, max_opacity, size_increase, opacity_increase, size_factor, opacity_factor
+                sort_by, selection_method, num_pathways, fig_width, fig_height, 
+                min_size, max_size, min_opacity, max_opacity, 
+                size_increase, opacity_increase, size_factor, opacity_factor
             )
             display_plot(fig)
 
             # Show filtered and selected data
-            st.write("### Selected Data for Visualization")
-            st.dataframe(selected_data)
-            
-            st.write("### All Filtered Data")
-            st.dataframe(filtered_data)
+            if selected_data is not None and filtered_data is not None:
+                st.write("### Selected Data for Visualization")
+                st.dataframe(selected_data)
+                
+                st.write("### All Filtered Data")
+                st.dataframe(filtered_data)
 
             # PyGWalker Integration
             st.write("### Interactive Data Exploration with PyGWalker")
@@ -380,29 +384,30 @@ if __name__ == "__main__":
                 pygwalker.explorer()
 
             # Export options
-            st.write("### Export Options")
-            export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
+            if fig is not None:
+                st.write("### Export Options")
+                export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
 
-            def save_and_download(format, dpi=600):
-                buffer = BytesIO()
-                fig.savefig(buffer, format=format, dpi=dpi, bbox_inches='tight')
-                buffer.seek(0)
-                plt.close()
-                return buffer
+                def save_and_download(format, dpi=600):
+                    buffer = BytesIO()
+                    fig.savefig(buffer, format=format, dpi=dpi, bbox_inches='tight')
+                    buffer.seek(0)
+                    plt.close()
+                    return buffer
 
-            if export_as == "JPG":
-                buffer = save_and_download("jpeg")
-                st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
-            elif export_as == "PNG":
-                buffer = save_and_download("png")
-                st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
-            elif export_as == "SVG":
-                buffer = save_and_download("svg")
-                st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
-            elif export_as == "TIFF":
-                dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
-                buffer = save_and_download("tiff", dpi=dpi)
-                st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
+                if export_as == "JPG":
+                    buffer = save_and_download("jpeg")
+                    st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
+                elif export_as == "PNG":
+                    buffer = save_and_download("png")
+                    st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
+                elif export_as == "SVG":
+                    buffer = save_and_download("svg")
+                    st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
+                elif export_as == "TIFF":
+                    dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
+                    buffer = save_and_download("tiff", dpi=dpi)
+                    st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
 
     else:
         st.warning("Please upload an Excel file to visualize the data.")
