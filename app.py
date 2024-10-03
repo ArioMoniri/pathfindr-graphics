@@ -212,6 +212,11 @@ if __name__ == "__main__":
         
         if df is not None:
             st.write("Data loaded successfully!")
+
+            # Initialize variables
+            fig = None
+            filtered_data = None
+            selected_data = None
             
             # Apply -log10 transformation
             tab1, tab2, tab3 = st.tabs(["Data Preview", "Visualization Settings", "Interactive Options"])
