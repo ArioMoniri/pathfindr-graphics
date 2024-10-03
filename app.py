@@ -112,14 +112,19 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                          min_size, max_size, min_opacity, max_opacity, 
                          size_increase, opacity_increase, size_factor, opacity_factor,
                          show_annotation_id, annotation_sort, annotation_font, annotation_size,
-                         annotation_alignment, legend_fontsize):
+                         annotation_alignment, legend_fontsize, allow_more_rows):
     try:
-        selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, 
-                                                               selection_method, num_pathways)
+        # Handle annotations
+        def clean_pathway_name(name):
+            # Remove only the content within parentheses
+            return re.sub(r'\([^)]*\)', '', name).strip()
+
+        selected_data, filtered_data, discarded_data = get_sorted_filtered_data(df, sort_by, ranges, 
+                                                               selection_method, num_pathways, allow_more_rows)
         
         if selected_data.empty:
             st.warning("No data to display after applying filters.")
-            return None, filtered_data, selected_data
+            return None, filtered_data, selected_data, discarded_data
 
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
         
@@ -181,10 +186,10 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font)
 
         # Adjust layout to make room for labels
-        plt.subplots_adjust(left=0.4)  # Increase left margin for pathway names
+        plt.subplots_adjust(left=0.4, right=0.8) # Increase left margin for pathway names
 
-        # Remove the separate annotation loop
-        # The y-axis labels now serve as the annotations
+        # Set Y-axis label
+        ax.set_ylabel(y_label, fontsize=legend_fontsize)
 
         # Invert y-axis to match the image
         ax.invert_yaxis()
@@ -193,7 +198,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax.set_title(title, fontsize=legend_fontsize)
 
         # Add colorbar
-        cbar = plt.colorbar(scatter, ax=ax)
+        cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
+        cbar = plt.colorbar(scatter, cax=cbar_ax)
         cbar.set_label(legend_label, fontsize=legend_fontsize)
         cbar.ax.tick_params(labelsize=legend_fontsize)
 
@@ -213,6 +219,59 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None
+
+def create_legends(fig, sizes, opacities, size_col, opacity_col, legend_fontsize):
+    legend_elements = []
+    legend_labels = []
+    
+    if size_col != "None":
+        size_values = [np.min(sizes), np.median(sizes), np.max(sizes)]
+        for size in size_values:
+            legend_elements.append(plt.scatter([], [], s=size, c='gray', alpha=0.5))
+            legend_labels.append(f'{size_col}: {int(size)}')
+
+    if opacity_col != "None":
+        opacity_values = [np.min(opacities), np.median(opacities), np.max(opacities)]
+        for opacity in opacity_values:
+            legend_elements.append(plt.scatter([], [], s=50, c='gray', alpha=opacity))
+            legend_labels.append(f'{opacity_col}: {opacity:.2f}')
+
+    if legend_elements:
+        legend_ax = fig.add_axes([0.85, 0.05, 0.1, 0.1])
+        legend_ax.axis('off')
+        legend_ax.legend(legend_elements, legend_labels, loc='center', fontsize=legend_fontsize, title="Size and Opacity")
+        legend_ax.set_title("Size and Opacity", fontsize=legend_fontsize)
+
+def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways, allow_more_rows):
+    filtered_data = df.copy()
+    discarded_data = {}
+    
+    for col, (min_val, max_val) in ranges.items():
+        if pd.api.types.is_numeric_dtype(df[col]):
+            discarded = filtered_data[(filtered_data[col] < min_val) | (filtered_data[col] > max_val)]
+            filtered_data = filtered_data[(filtered_data[col] >= min_val) & (filtered_data[col] <= max_val)]
+            discarded_data[col] = discarded
+    
+    filtered_data = filtered_data.sort_values(by=sort_by, ascending=False)
+    
+    if allow_more_rows and len(filtered_data) < num_pathways:
+        num_pathways = len(filtered_data)
+    
+    if selection_method == 'Top (Highest Values)':
+        selected_data = filtered_data.head(num_pathways)
+    elif selection_method == 'Bottom (Lowest Values)':
+        selected_data = filtered_data.tail(num_pathways)
+    elif selection_method == 'Both Ends':
+        half_num = num_pathways // 2
+        selected_data = pd.concat([
+            filtered_data.head(half_num),
+            filtered_data.tail(half_num)
+        ])
+    else:  # Middle
+        start_idx = (len(filtered_data) - num_pathways) // 2
+        selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
+    
+    return selected_data, filtered_data, discarded_data
         
 # Main execution
 if __name__ == "__main__":
@@ -258,6 +317,8 @@ if __name__ == "__main__":
                         df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
 
             with tab2:
+
+                allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
                 # Move all the setting widgets here
                 with st.form("visualization_settings"):
                     columns = df.columns.tolist()
@@ -400,21 +461,36 @@ if __name__ == "__main__":
                     submit_button = st.form_submit_button("Generate Visualization")
 
                 # Plot and export chart upon form submission
-                if submit_button:
-                    start_time = time.time()
-                    fig, filtered_data, selected_data = plot_and_export_chart(
+      import streamlit as st
+
+# ... [other imports and setup] ...
+
+# In your main Streamlit app
+allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
+
+
+
+                if st.button("Generate Visualization"):
+                    fig, filtered_data, selected_data, discarded_data = plot_and_export_chart(
                         df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
                         custom_title, custom_x_label, custom_y_label, custom_legend_label,
                         sort_by, selection_method, num_pathways, fig_width, fig_height, 
                         min_size, max_size, min_opacity, max_opacity, 
                         size_increase, opacity_increase, size_factor, opacity_factor,
                         show_annotation_id, annotation_sort, annotation_font, annotation_size,
-                        annotation_alignment, legend_fontsize
+                        annotation_alignment, legend_fontsize, allow_more_rows
                     )
-                    plot_time = time.time() - start_time
-                    st.write(f"Plot generation time: {plot_time:.2f} seconds")
+                    
                     if fig:
-                        display_plot(fig)
+                        st.pyplot(fig)
+                        
+                        # Display discarded rows information
+                        st.write("### Rows Discarded Due to Filtering")
+                        for col, discarded in discarded_data.items():
+                            st.write(f"Discarded by {col} filter:")
+                            st.dataframe(discarded)
+
+
                 
                 # Show selected data in tab 2
                 if selected_data is not None:
