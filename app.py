@@ -192,6 +192,7 @@ if __name__ == "__main__":
         
         if df is not None:
             st.write("Data loaded successfully!")
+            columns = df.columns.tolist()
             
             # Initialize variables
             fig = None
@@ -225,7 +226,7 @@ if __name__ == "__main__":
                         size_col = st.selectbox("Select size column (optional)", options=["None"] + columns)
                     with col2:
                         opacity_col = st.selectbox("Select opacity column (optional)", options=["None"] + columns)
-            
+
                     # Min and max size and opacity
                     st.write("### Size and Opacity Adjustments")
                     col1, col2, col3, col4 = st.columns(4)
@@ -266,7 +267,7 @@ if __name__ == "__main__":
                             options=['Top (Highest Values)', 'Bottom (Lowest Values)', 'Both Ends', 'Middle']
                         )
                     with col3:
-                        num_pathways = st.slider("Number of pathways to show", min_value=1, max_value=len(df), value=10)
+                        num_pathways = st.slider("Number of pathways to show", min_value=1, max_value=len(df), value=min(10, len(df)))
 
                     # Figure size options
                     st.write("### Figure Size")
@@ -275,7 +276,6 @@ if __name__ == "__main__":
                         fig_width = st.slider("Figure width", min_value=6, max_value=20, value=12)
                     with col2:
                         fig_height = st.slider("Figure height", min_value=4, max_value=16, value=8)
-
 
                     # Range sliders for numeric columns
                     st.write("### Range Filters")
