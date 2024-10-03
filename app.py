@@ -113,7 +113,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                          size_increase, opacity_increase, size_factor, opacity_factor,
                          show_annotation_id, annotation_sort, annotation_font, annotation_size,
                          annotation_alignment, legend_fontsize):
-try:
+    try:
         selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, 
                                                                selection_method, num_pathways)
         
