@@ -47,10 +47,10 @@ def transform_columns(df):
     
     return df
 
-# Function to normalize the data for size and opacity
+# Update the normalize_data function
 def normalize_data(data, min_val, max_val, factor=1.0, increase=True):
     if isinstance(data, (int, float)):
-        return data
+        return np.full(len(data), data)
     
     if np.all(np.isnan(data)) or len(data) == 0 or np.max(data) == np.min(data):
         return np.full(len(data), (min_val + max_val) / 2)
@@ -64,36 +64,8 @@ def normalize_data(data, min_val, max_val, factor=1.0, increase=True):
     # Apply factor and clip values to ensure they stay within the valid range
     return np.clip(scaled_data * factor, min_val, max_val)
 
-# Function to get sorted and filtered data
-def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways):
-    filtered_data = df.copy()
-    for col, (min_val, max_val) in ranges.items():
-        if pd.api.types.is_numeric_dtype(df[col]):
-            filtered_data = filtered_data[(filtered_data[col] >= min_val) & (filtered_data[col] <= max_val)]
-    
-    filtered_data = filtered_data.sort_values(by=sort_by)
-    
-    if num_pathways > len(filtered_data):
-        num_pathways = len(filtered_data)
-    
-    if selection_method == 'Top (Highest Values)':
-        selected_data = filtered_data.tail(num_pathways)
-    elif selection_method == 'Bottom (Lowest Values)':
-        selected_data = filtered_data.head(num_pathways)
-    elif selection_method == 'Both Ends':
-        half_num = num_pathways // 2
-        selected_data = pd.concat([
-            filtered_data.head(half_num),
-            filtered_data.tail(half_num)
-        ])
-    else:  # Middle
-        start_idx = (len(filtered_data) - num_pathways) // 2
-        selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
-    
-    return selected_data, filtered_data
-
-# Function to create size and opacity legend
-def create_legends(ax, sizes, opacities, size_label=None, opacity_label=None):
+# Update the create_legends function
+def create_legends(ax, sizes, opacities, size_col, opacity_col):
     legend_elements = []
     legend_labels = []
     
@@ -104,9 +76,9 @@ def create_legends(ax, sizes, opacities, size_label=None, opacity_label=None):
             size_values = [min(unique_sizes), np.median(unique_sizes), max(unique_sizes)]
             for size in size_values:
                 legend_elements.append(Line2D([0], [0], marker='o', color='w', 
-                                             markerfacecolor='gray', markersize=np.sqrt(size/10),
+                                             markerfacecolor='gray', markersize=np.sqrt(size),
                                              markeredgecolor='black', linestyle='None'))
-                legend_labels.append(f'{size_label}: {int(size)}' if size_label else f'Size: {int(size)}')
+                legend_labels.append(f'{size_col}: {int(size)}')
 
     # Opacity legend
     if not isinstance(opacities, (int, float)):
@@ -117,13 +89,14 @@ def create_legends(ax, sizes, opacities, size_label=None, opacity_label=None):
                 legend_elements.append(Line2D([0], [0], marker='o', color='gray',
                                              markerfacecolor='gray', markersize=10,
                                              alpha=opacity, linestyle='None'))
-                legend_labels.append(f'{opacity_label}: {opacity:.2f}' if opacity_label else f'Opacity: {opacity:.2f}')
+                legend_labels.append(f'{opacity_col}: {opacity:.2f}')
 
     if legend_elements:
-        ax.legend(legend_elements, legend_labels, loc='upper center', 
-                  bbox_to_anchor=(0.5, 1.15), ncol=2, frameon=True, title="Size and Opacity")
+        leg = ax.legend(legend_elements, legend_labels, loc='center left', 
+                  bbox_to_anchor=(1.05, 0.5), frameon=True, title="Size and Opacity")
+        plt.setp(leg.get_title(), multialignment='center')
 
-# Function to plot and export the chart
+# Update the plot_and_export_chart function
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, 
                          colormap, title, x_label, y_label, legend_label, sort_by, 
                          selection_method, num_pathways, fig_width, fig_height, 
@@ -185,6 +158,12 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                           edgecolors='black')
             ax.legend(title=legend_label, bbox_to_anchor=(1.05, 1), loc='upper left')
 
+        # Add annotations
+        for i, txt in enumerate(selected_data.index):
+            ax.annotate(txt, (x_values[i], y_values[i]), xytext=(5, 5), 
+                        textcoords='offset points', ha='left', va='bottom',
+                        fontsize=8, alpha=0.7)
+
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
         ax.set_title(title)
@@ -193,15 +172,14 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             ax.invert_yaxis()
 
         # Create size and opacity legends
-        create_legends(ax, sizes, opacities, 
-                      size_label=size_col if size_col != "None" else None,
-                      opacity_label=opacity_col if opacity_col != "None" else None)
+        create_legends(ax, sizes, opacities, size_col, opacity_col)
 
         plt.tight_layout()
         return fig, filtered_data, selected_data
     except Exception as e:
         st.error(f"Error creating plot: {str(e)}")
         return None, None, None
+
 
 # Function to display the plot in Streamlit
 def display_plot(fig):
@@ -257,18 +235,18 @@ if __name__ == "__main__":
                         size_col = st.selectbox("Select size column (optional)", options=["None"] + columns)
                     with col2:
                         opacity_col = st.selectbox("Select opacity column (optional)", options=["None"] + columns)
-
+            
                     # Min and max size and opacity
                     st.write("### Size and Opacity Adjustments")
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
-                        min_size = st.slider("Min size", min_value=100, max_value=1000, value=300)
+                        min_size = st.slider("Min size", min_value=10, max_value=1000, value=50)
                     with col2:
-                        max_size = st.slider("Max size", min_value=100, max_value=1000, value=600)
+                        max_size = st.slider("Max size", min_value=10, max_value=1000, value=500)
                     with col3:
-                        min_opacity = st.slider("Min opacity", min_value=0.0, max_value=1.0, value=0.5, step=0.1)
+                        min_opacity = st.slider("Min opacity", min_value=0.1, max_value=1.0, value=0.5, step=0.1)
                     with col4:
-                        max_opacity = st.slider("Max opacity", min_value=0.0, max_value=1.0, value=1.0, step=0.1)
+                        max_opacity = st.slider("Max opacity", min_value=0.1, max_value=1.0, value=1.0, step=0.1)
 
                     # Sensitivity for size and opacity
                     st.write("### Sensitivity for Size and Opacity Changes")
