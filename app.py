@@ -220,6 +220,11 @@ if __name__ == "__main__":
         if df is not None:
             st.write("Data loaded successfully!")
             
+            # Initialize variables
+            fig = None
+            filtered_data = None
+            selected_data = None
+            
             # Automatically apply p-value transformation
             df = transform_columns(df)
             columns = df.columns.tolist()
