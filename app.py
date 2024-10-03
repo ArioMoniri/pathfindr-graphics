@@ -140,10 +140,14 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         x_values = pd.to_numeric(selected_data[x_col], errors='coerce').values
 
         # Handle annotations
+        def clean_pathway_name(name):
+            # Remove RHSA and DOID IDs
+            return re.sub(r'(R-HSA-\d+|DOID:\d+):\s*', '', name)
+
         if show_annotation_id:
             annotations = selected_data.index.tolist()
         else:
-            annotations = selected_data[y_col].str.split(':', expand=True).iloc[:, -1].str.strip().tolist()
+            annotations = selected_data[y_col].apply(clean_pathway_name).tolist()
 
         if annotation_sort == 'p-value':
             sort_order = selected_data[color_col].argsort()[::-1]  # Reverse to get descending order
@@ -160,43 +164,27 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         opacities = opacities[sort_order] if isinstance(opacities, np.ndarray) else opacities
         selected_data = selected_data.iloc[sort_order]
 
+        # Adjust figure size to accommodate long pathway names
+        fig_width += 5  # Increase width to make room for pathway names
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+
         # Plot the data
-        if pd.api.types.is_numeric_dtype(selected_data[color_col]):
-            scatter = ax.scatter(x_values, y_values,
-                                c=selected_data[color_col],
-                                cmap=colormap,
-                                s=sizes,
-                                alpha=opacities,
-                                edgecolors='black')
-            cbar = plt.colorbar(scatter, ax=ax)
-            cbar.set_label(legend_label, fontsize=legend_fontsize)
-            cbar.ax.tick_params(labelsize=legend_fontsize)
-        else:
-            unique_categories = selected_data[color_col].unique()
-            colors = plt.get_cmap(colormap)(np.linspace(0, 1, len(unique_categories)))
-            for category, color in zip(unique_categories, colors):
-                mask = selected_data[color_col] == category
-                ax.scatter(x_values[mask], y_values[mask],
-                          label=category,
-                          color=color,
-                          s=sizes[mask] if isinstance(sizes, np.ndarray) else sizes,
-                          alpha=opacities[mask] if isinstance(opacities, np.ndarray) else opacities,
-                          edgecolors='black')
-            leg = ax.legend(title=legend_label, bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=legend_fontsize)
-            plt.setp(leg.get_title(), fontsize=legend_fontsize)
+        scatter = ax.scatter(x_values, y_values,
+                            c=selected_data[color_col],
+                            cmap=colormap,
+                            s=sizes,
+                            alpha=opacities,
+                            edgecolors='black')
 
         # Set y-axis ticks and labels
         ax.set_yticks(y_values)
         ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font)
 
         # Adjust layout to make room for labels
-        plt.subplots_adjust(left=0.3)
+        plt.subplots_adjust(left=0.4)  # Increase left margin for pathway names
 
-        # Add annotations on the side
-        for i, label in enumerate(annotations):
-            ax.annotate(label, (0, i), xytext=(-5, 0), 
-                        textcoords='offset points', ha='right', va='center',
-                        fontsize=annotation_size, fontfamily=annotation_font)
+        # Remove the separate annotation loop
+        # The y-axis labels now serve as the annotations
 
         # Invert y-axis to match the image
         ax.invert_yaxis()
@@ -204,10 +192,19 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
         ax.set_title(title, fontsize=legend_fontsize)
 
+        # Add colorbar
+        cbar = plt.colorbar(scatter, ax=ax)
+        cbar.set_label(legend_label, fontsize=legend_fontsize)
+        cbar.ax.tick_params(labelsize=legend_fontsize)
+
         # Create size and opacity legends
         create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
         ax.tick_params(axis='both', which='major', labelsize=legend_fontsize)
+
+        # Adjust x-axis to start from a round number just below the minimum x value
+        x_min = np.floor(min(x_values) / 10) * 10
+        ax.set_xlim(left=x_min)
 
         plt.tight_layout()
         return fig, filtered_data, selected_data
@@ -216,6 +213,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None
+        
 # Main execution
 if __name__ == "__main__":
     st.set_page_config(layout="wide", page_title="Pathway Significance Visualization")
