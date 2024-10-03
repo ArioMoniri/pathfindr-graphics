@@ -141,12 +141,31 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         if pd.api.types.is_numeric_dtype(selected_data[y_col]):
             y_values = pd.to_numeric(selected_data[y_col], errors='coerce').values
         else:
-            y_values = pd.Categorical(selected_data[y_col]).codes
+            y_values = np.arange(len(selected_data))  # Use range instead of categorical codes
+
+        # Handle annotations
+        if show_annotation_id:
+            annotations = selected_data.index
+        else:
+            annotations = selected_data[y_col]
+
+        if annotation_sort == 'p-value':
+            sort_order = selected_data[color_col].argsort()
+        elif annotation_sort == 'name_length':
+            sort_order = selected_data[y_col].astype(str).str.len().argsort()
+        else:
+            sort_order = np.arange(len(selected_data))
+
+        annotations = annotations.iloc[sort_order]
+        x_values = x_values[sort_order]
+        y_values = y_values[sort_order]
+        sizes = sizes[sort_order] if isinstance(sizes, np.ndarray) else sizes
+        opacities = opacities[sort_order] if isinstance(opacities, np.ndarray) else opacities
 
         # Plot the data
         if pd.api.types.is_numeric_dtype(selected_data[color_col]):
             scatter = ax.scatter(x_values, y_values,
-                                c=selected_data[color_col],
+                                c=selected_data[color_col].iloc[sort_order],
                                 cmap=colormap,
                                 s=sizes,
                                 alpha=opacities,
@@ -159,7 +178,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             colors = plt.get_cmap(colormap)(np.linspace(0, 1, len(unique_categories)))
 
             for category, color in zip(unique_categories, colors):
-                mask = selected_data[color_col] == category
+                mask = selected_data[color_col].iloc[sort_order] == category
                 ax.scatter(x_values[mask], y_values[mask],
                           label=category,
                           color=color,
@@ -169,30 +188,18 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             leg = ax.legend(title=legend_label, bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=legend_fontsize)
             plt.setp(leg.get_title(), fontsize=legend_fontsize)
 
-        # Handle annotations
-        if show_annotation_id:
-            annotations = selected_data.index
-        else:
-            annotations = selected_data[y_col]
+        # Remove y-axis ticks and labels
+        ax.set_yticks([])
+        ax.set_yticklabels([])
 
-        if annotation_sort == 'p-value':
-            sort_order = selected_data[color_col].argsort()
-            annotations = annotations[sort_order]
-            y_values = y_values[sort_order]
-        elif annotation_sort == 'name_length':
-            sort_order = selected_data[y_col].str.len().argsort()
-            annotations = annotations[sort_order]
-            y_values = y_values[sort_order]
-
-        ax.set_yticks(y_values)
-        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha=annotation_alignment)
+        # Add annotations next to the data points
+        for i, (x, y, label) in enumerate(zip(x_values, y_values, annotations)):
+            ax.annotate(str(label), (x, y), xytext=(5, 0), 
+                        textcoords='offset points', ha=annotation_alignment, va='center',
+                        fontsize=annotation_size, fontfamily=annotation_font)
 
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
-        ax.set_ylabel(y_label, fontsize=legend_fontsize)
         ax.set_title(title, fontsize=legend_fontsize)
-
-        if isinstance(y_values, np.ndarray) and y_values.dtype.kind in 'OSU':
-            ax.invert_yaxis()
 
         # Create size and opacity legends
         create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
