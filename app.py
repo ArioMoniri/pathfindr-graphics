@@ -61,7 +61,8 @@ def normalize_data(data, min_val, max_val, factor=1.0, increase=True):
     if not increase:
         scaled_data = max_val - (scaled_data - min_val)
     
-    return scaled_data * factor
+    # Apply factor and clip values to ensure they stay within the valid range
+    return np.clip(scaled_data * factor, min_val, max_val)
 
 # Function to get sorted and filtered data
 def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways):
