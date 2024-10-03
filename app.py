@@ -7,6 +7,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.lines import Line2D
 from pygwalker.api.streamlit import init_streamlit_comm, StreamlitRenderer
 from functools import lru_cache
+import time
 
 # Set the title and description of the app
 st.set_page_config(layout="wide", page_title="Pathway Significance Visualization")
@@ -28,43 +29,18 @@ def load_data(uploaded_file):
 def generate_colormap(color1, color2):
     return LinearSegmentedColormap.from_list('custom_cmap', [color1, color2])
 
-# Function to handle p-values and add log10 transformed columns
-def transform_columns(df):
-    numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
-    
-    pvalue_columns = st.multiselect(
-        "Select p-value columns for -log10 transformation",
-        options=numeric_columns,
-        help="These columns will be treated as p-values with -log10 transformation."
-    )
-    
-    if pvalue_columns:
-        st.info("Selected p-value columns will be transformed using -log10.")
-        
-        for col in pvalue_columns:
-            neg_log_col_name = f'-log10({col})'
-            df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
-    
-    return df
-
-# Update the normalize_data function
-def normalize_data(data, min_val, max_val, factor=1.0, increase=True):
-    if isinstance(data, (int, float)):
-        return np.full(len(data), data)
-    
-    if np.all(np.isnan(data)) or len(data) == 0 or np.max(data) == np.min(data):
-        return np.full(len(data), (min_val + max_val) / 2)
-    
-    norm_data = (data - np.min(data)) / (np.max(data) - np.min(data))
-    scaled_data = norm_data * (max_val - min_val) + min_val
-    
+# Optimized normalize_data function
+@np.vectorize
+def normalize_data_vectorized(value, min_val, max_val, factor=1.0, increase=True):
+    if np.isnan(value):
+        return (min_val + max_val) / 2
+    norm_value = (value - min_val) / (max_val - min_val)
     if not increase:
-        scaled_data = max_val - (scaled_data - min_val)
-    
-    # Apply factor and clip values to ensure they stay within the valid range
-    return np.clip(scaled_data * factor, min_val, max_val)
+        norm_value = 1 - norm_value
+    return np.clip(norm_value * factor, 0, 1) * (max_val - min_val) + min_val
 
-# Add the missing get_sorted_filtered_data function
+# Optimized get_sorted_filtered_data function
+@st.cache_data
 def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways):
     filtered_data = df.copy()
     for col, (min_val, max_val) in ranges.items():
@@ -92,39 +68,33 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     
     return selected_data, filtered_data
 
-# Update the create_legends function
+# Updated create_legends function
 def create_legends(ax, sizes, opacities, size_col, opacity_col):
     legend_elements = []
     legend_labels = []
     
-    # Size legend
-    if not isinstance(sizes, (int, float)):
-        unique_sizes = sorted(set([int(s) for s in sizes]))
-        if len(unique_sizes) > 1:
-            size_values = [min(unique_sizes), np.median(unique_sizes), max(unique_sizes)]
-            for size in size_values:
-                legend_elements.append(Line2D([0], [0], marker='o', color='w', 
-                                             markerfacecolor='gray', markersize=np.sqrt(size),
-                                             markeredgecolor='black', linestyle='None'))
-                legend_labels.append(f'{size_col}: {int(size)}')
+    if size_col != "None":
+        size_values = [np.min(sizes), np.median(sizes), np.max(sizes)]
+        for size in size_values:
+            legend_elements.append(Line2D([0], [0], marker='o', color='w', 
+                                         markerfacecolor='gray', markersize=np.sqrt(size),
+                                         markeredgecolor='black', linestyle='None'))
+            legend_labels.append(f'{size_col}: {int(size)}')
 
-    # Opacity legend
-    if not isinstance(opacities, (int, float)):
-        unique_opacities = sorted(set([round(o, 2) for o in opacities]))
-        if len(unique_opacities) > 1:
-            opacity_values = [min(unique_opacities), np.median(unique_opacities), max(unique_opacities)]
-            for opacity in opacity_values:
-                legend_elements.append(Line2D([0], [0], marker='o', color='gray',
-                                             markerfacecolor='gray', markersize=10,
-                                             alpha=opacity, linestyle='None'))
-                legend_labels.append(f'{opacity_col}: {opacity:.2f}')
+    if opacity_col != "None":
+        opacity_values = [np.min(opacities), np.median(opacities), np.max(opacities)]
+        for opacity in opacity_values:
+            legend_elements.append(Line2D([0], [0], marker='o', color='gray',
+                                         markerfacecolor='gray', markersize=10,
+                                         alpha=opacity, linestyle='None'))
+            legend_labels.append(f'{opacity_col}: {opacity:.2f}')
 
     if legend_elements:
         leg = ax.legend(legend_elements, legend_labels, loc='center left', 
                   bbox_to_anchor=(1.05, 0.5), frameon=True, title="Size and Opacity")
         plt.setp(leg.get_title(), multialignment='center')
 
-# Update the plot_and_export_chart function
+# Updated plot_and_export_chart function with improved error handling
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, 
                          colormap, title, x_label, y_label, legend_label, sort_by, 
                          selection_method, num_pathways, fig_width, fig_height, 
@@ -143,16 +113,16 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Handle size values
         if size_col != "None":
             sizes = pd.to_numeric(selected_data[size_col], errors='coerce')
-            sizes = normalize_data(sizes, min_size, max_size, size_factor, size_increase)
+            sizes = normalize_data_vectorized(sizes, min_size, max_size, size_factor, size_increase)
         else:
-            sizes = (min_size + max_size) / 2
+            sizes = np.full(len(selected_data), (min_size + max_size) / 2)
         
         # Handle opacity values
         if opacity_col != "None":
             opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
-            opacities = normalize_data(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
+            opacities = normalize_data_vectorized(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
         else:
-            opacities = (min_opacity + max_opacity) / 2
+            opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
 
         # Ensure x_col and y_col are numeric, handle non-numeric (categorical) values explicitly
         x_values = pd.to_numeric(selected_data[x_col], errors='coerce')
@@ -206,23 +176,19 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         return fig, filtered_data, selected_data
     except Exception as e:
         st.error(f"Error creating plot: {str(e)}")
+        import traceback
+        st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None
-
-
-# Function to display the plot in Streamlit
-def display_plot(fig):
-    if fig is not None:
-        buf = BytesIO()
-        fig.savefig(buf, format="png", bbox_inches='tight', dpi=300)
-        buf.seek(0)
-        st.image(buf)
 
 # Main execution
 if __name__ == "__main__":
     uploaded_file = st.file_uploader("Upload your data file", type=["xlsx"])
 
     if uploaded_file is not None:
+        start_time = time.time()
         df = load_data(uploaded_file)
+        load_time = time.time() - start_time
+        st.write(f"Data loading time: {load_time:.2f} seconds")
         
         if df is not None:
             st.write("Data loaded successfully!")
@@ -232,10 +198,6 @@ if __name__ == "__main__":
             filtered_data = None
             selected_data = None
             
-            # Automatically apply p-value transformation
-            df = transform_columns(df)
-            columns = df.columns.tolist()
-
             # Use tabs to organize the UI
             tab1, tab2, tab3 = st.tabs(["Data Preview", "Visualization Settings", "Results"])
             
@@ -369,6 +331,7 @@ if __name__ == "__main__":
 
                 # Plot and export chart upon form submission
                 if submit_button:
+                    start_time = time.time()
                     fig, filtered_data, selected_data = plot_and_export_chart(
                         df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
                         custom_title, custom_x_label, custom_y_label, custom_legend_label,
@@ -376,7 +339,10 @@ if __name__ == "__main__":
                         min_size, max_size, min_opacity, max_opacity, 
                         size_increase, opacity_increase, size_factor, opacity_factor
                     )
-                    display_plot(fig)
+                    plot_time = time.time() - start_time
+                    st.write(f"Plot generation time: {plot_time:.2f} seconds")
+                    if fig:
+                        display_plot(fig)
 
             with tab3:
                 # Show filtered and selected data
