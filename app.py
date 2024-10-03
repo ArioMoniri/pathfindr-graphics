@@ -144,9 +144,9 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
 
         # Ensure x_col and y_col are numeric, handle non-numeric (categorical) values explicitly
-        x_values = pd.to_numeric(selected_data[x_col], errors='coerce')
+        x_values = pd.to_numeric(selected_data[x_col], errors='coerce').values
         if pd.api.types.is_numeric_dtype(selected_data[y_col]):
-            y_values = pd.to_numeric(selected_data[y_col], errors='coerce')
+            y_values = pd.to_numeric(selected_data[y_col], errors='coerce').values
         else:
             # Convert non-numeric y_col to categorical and assign numeric labels
             y_values = pd.Categorical(selected_data[y_col]).codes
@@ -177,7 +177,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Add annotations
         for i, txt in enumerate(selected_data.index):
-            ax.annotate(str(txt), (x_values.iloc[i], y_values.iloc[i]), xytext=(5, 5), 
+            ax.annotate(str(txt), (x_values[i], y_values[i]), xytext=(5, 5), 
                         textcoords='offset points', ha='left', va='bottom',
                         fontsize=8, alpha=0.7)
 
@@ -185,7 +185,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax.set_ylabel(y_label)
         ax.set_title(title)
 
-        if isinstance(y_values, pd.Series) and (y_values.dtype == object or isinstance(y_values.dtype, pd.CategoricalDtype)):
+        if isinstance(y_values, np.ndarray) and y_values.dtype.kind in 'OSU':
             ax.invert_yaxis()
 
         # Create size and opacity legends
