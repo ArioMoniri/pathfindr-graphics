@@ -7,3 +7,4 @@ openpyxl
 bytesbufio
 pygwalker
 scipy
+functools
