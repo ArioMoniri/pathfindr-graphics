@@ -31,20 +31,25 @@ def generate_colormap(color1, color2):
 # Function to handle p-values and add log10 transformed columns
 def transform_columns(df):
     numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
-
+    
     pvalue_columns = st.multiselect(
         "Select p-value columns for -log10 transformation",
         options=numeric_columns,
         help="These columns will be treated as p-values with -log10 transformation."
     )
-
+    
     if pvalue_columns:
         st.info("Selected p-value columns will be transformed using -log10.")
+        
         for col in pvalue_columns:
             neg_log_col_name = f'-log10({col})'
             df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
-            st.write(f"Added column: {neg_log_col_name}")
-
+            if neg_log_col_name not in numeric_columns:
+                numeric_columns.append(neg_log_col_name)
+        
+        st.session_state['columns'] = df.columns.tolist()  # Update session state to refresh column options
+        st.experimental_rerun()  # Trigger rerun to update UI with new columns
+    
     return df
 
 # Function to normalize the data for size and opacity
@@ -227,21 +232,18 @@ if __name__ == "__main__":
                 with st.form("visualization_settings"):
                     # Transform columns
                     df = transform_columns(df)
-                    columns = df.columns.tolist()  # Update column list after transformation
+                    columns = df.columns.tolist()
 
                     # Column selection
                     st.write("### Select Visualization Columns")
                     col1, col2, col3 = st.columns(3)
                     
                     with col1:
-                        x_col = st.selectbox("Select X-axis column", options=columns, 
-                                            index=columns.index("Enrichment") if "Enrichment" in columns else 0)
+                        x_col = st.selectbox("Select X-axis column", options=columns)
                     with col2:
-                        y_col = st.selectbox("Select Y-axis column", options=columns, 
-                                            index=columns.index("Annotation Name") if "Annotation Name" in columns else 0)
+                        y_col = st.selectbox("Select Y-axis column", options=columns)
                     with col3:
-                        default_color_col = next((col for col in columns if col.startswith('-log10(')), columns[0])
-                        color_col = st.selectbox("Select color column", options=columns, index=columns.index(default_color_col))
+                        color_col = st.selectbox("Select color column", options=columns)
 
                     # Size and opacity options
                     st.write("### Additional Circle Customization Options")
