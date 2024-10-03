@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy import stats
 from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.lines import Line2D
@@ -32,29 +31,22 @@ def generate_colormap(color1, color2):
 # Function to handle p-values and add log10 transformed columns
 def transform_columns(df):
     numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
-    
+
     pvalue_columns = st.multiselect(
         "Select p-value columns for -log10 transformation",
         options=numeric_columns,
         help="These columns will be treated as p-values with -log10 transformation."
     )
-    
+
     if pvalue_columns:
         st.info("Selected p-value columns will be transformed using -log10.")
-        
+
         for col in pvalue_columns:
             neg_log_col_name = f'-log10({col})'
             df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
+            st.write(f"Added column: {neg_log_col_name}")
     
     return df
-
-# Function to clean and convert data columns to numeric types
-def clean_numeric_columns(df, cols):
-    result_df = df.copy()
-    for col in cols:
-        if col in result_df.columns:
-            result_df[col] = pd.to_numeric(result_df[col], errors='coerce').fillna(0)
-    return result_df
 
 # Function to normalize the data for size and opacity
 def normalize_data(data, min_val, max_val, factor=1.0, increase=True):
