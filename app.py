@@ -462,33 +462,33 @@ if __name__ == "__main__":
 
 
 
-# In your main Streamlit app
-allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
+                    # In your main Streamlit app
+                    allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
 
 
 
-            if st.button("Generate Visualization"):
-                fig, filtered_data, selected_data, discarded_data = plot_and_export_chart(
-                    df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
-                    custom_title, custom_x_label, custom_y_label, custom_legend_label,
-                    sort_by, selection_method, num_pathways, fig_width, fig_height, 
-                    min_size, max_size, min_opacity, max_opacity, 
-                    size_increase, opacity_increase, size_factor, opacity_factor,
-                    show_annotation_id, annotation_sort, annotation_font, annotation_size,
-                    annotation_alignment, legend_fontsize, allow_more_rows
-                )
-                
-                if fig:
-                    st.pyplot(fig)
-                    
-                    # Display discarded rows information
-                    st.write("### Rows Discarded Due to Filtering")
-                    for col, discarded in discarded_data.items():
-                        st.write(f"Discarded by {col} filter:")
-                        st.dataframe(discarded)
-
-
-                
+                    if st.button("Generate Visualization"):
+                        fig, filtered_data, selected_data, discarded_data = plot_and_export_chart(
+                            df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
+                            custom_title, custom_x_label, custom_y_label, custom_legend_label,
+                            sort_by, selection_method, num_pathways, fig_width, fig_height, 
+                            min_size, max_size, min_opacity, max_opacity, 
+                            size_increase, opacity_increase, size_factor, opacity_factor,
+                            show_annotation_id, annotation_sort, annotation_font, annotation_size,
+                            annotation_alignment, legend_fontsize, allow_more_rows
+                        )
+                        
+                        if fig:
+                            st.pyplot(fig)
+                            
+                            # Display discarded rows information
+                            st.write("### Rows Discarded Due to Filtering")
+                            for col, discarded in discarded_data.items():
+                                st.write(f"Discarded by {col} filter:")
+                                st.dataframe(discarded)
+        
+        
+                        
                 # Show selected data in tab 2
                 if selected_data is not None:
                     st.write("### Selected Data for Visualization")
