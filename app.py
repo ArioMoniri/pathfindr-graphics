@@ -64,6 +64,34 @@ def normalize_data(data, min_val, max_val, factor=1.0, increase=True):
     # Apply factor and clip values to ensure they stay within the valid range
     return np.clip(scaled_data * factor, min_val, max_val)
 
+# Add the missing get_sorted_filtered_data function
+def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways):
+    filtered_data = df.copy()
+    for col, (min_val, max_val) in ranges.items():
+        if pd.api.types.is_numeric_dtype(df[col]):
+            filtered_data = filtered_data[(filtered_data[col] >= min_val) & (filtered_data[col] <= max_val)]
+    
+    filtered_data = filtered_data.sort_values(by=sort_by)
+    
+    if num_pathways > len(filtered_data):
+        num_pathways = len(filtered_data)
+    
+    if selection_method == 'Top (Highest Values)':
+        selected_data = filtered_data.tail(num_pathways)
+    elif selection_method == 'Bottom (Lowest Values)':
+        selected_data = filtered_data.head(num_pathways)
+    elif selection_method == 'Both Ends':
+        half_num = num_pathways // 2
+        selected_data = pd.concat([
+            filtered_data.head(half_num),
+            filtered_data.tail(half_num)
+        ])
+    else:  # Middle
+        start_idx = (len(filtered_data) - num_pathways) // 2
+        selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
+    
+    return selected_data, filtered_data
+
 # Update the create_legends function
 def create_legends(ax, sizes, opacities, size_col, opacity_col):
     legend_elements = []
