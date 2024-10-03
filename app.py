@@ -95,6 +95,25 @@ def create_legends(ax, sizes, opacities, size_col, opacity_col):
         plt.setp(leg.get_title(), multialignment='center')
 
 # Updated plot_and_export_chart function with improved error handling
+def transform_columns(df):
+    numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+    
+    pvalue_columns = st.multiselect(
+        "Select p-value columns for -log10 transformation",
+        options=numeric_columns,
+        help="These columns will be treated as p-values with -log10 transformation."
+    )
+    
+    if pvalue_columns:
+        st.info("Selected p-value columns will be transformed using -log10.")
+        
+        for col in pvalue_columns:
+            neg_log_col_name = f'-log10({col})'
+            df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
+    
+    return df
+
+# Update the plot_and_export_chart function to fix the annotation issue
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, 
                          colormap, title, x_label, y_label, legend_label, sort_by, 
                          selection_method, num_pathways, fig_width, fig_height, 
@@ -158,7 +177,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Add annotations
         for i, txt in enumerate(selected_data.index):
-            ax.annotate(txt, (x_values[i], y_values[i]), xytext=(5, 5), 
+            ax.annotate(str(txt), (x_values.iloc[i], y_values.iloc[i]), xytext=(5, 5), 
                         textcoords='offset points', ha='left', va='bottom',
                         fontsize=8, alpha=0.7)
 
@@ -192,6 +211,10 @@ if __name__ == "__main__":
         
         if df is not None:
             st.write("Data loaded successfully!")
+            
+            # Apply -log10 transformation
+            df = transform_columns(df)
+            
             columns = df.columns.tolist()
             
             # Initialize variables
