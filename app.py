@@ -111,10 +111,10 @@ def create_legends(ax, sizes, opacities, size_label=None, opacity_label=None):
 
     # Opacity legend
     if not isinstance(opacities, (int, float)):
-        unique_opacities are sorted(set([round(o, 2) for o in opacities]))
+        unique_opacities = sorted(set([round(o, 2) for o in opacities]))
         if len(unique_opacities) > 1:
-            opacity_values are [min(unique_opacities), np.median(unique_opacities), max(unique_opacities)]
-                        for opacity in opacity_values:
+            opacity_values = [min(unique_opacities), np.median(unique_opacities), max(unique_opacities)]
+            for opacity in opacity_values:
                 legend_elements.append(Line2D([0], [0], marker='o', color='gray',
                                              markerfacecolor='gray', markersize=10,
                                              alpha=opacity, linestyle='None'))
@@ -123,6 +123,7 @@ def create_legends(ax, sizes, opacities, size_label=None, opacity_label=None):
     if legend_elements:
         ax.legend(legend_elements, legend_labels, loc='upper center', 
                   bbox_to_anchor=(0.5, 1.15), ncol=2, frameon=True, title="Size and Opacity")
+        
 
 # Function to plot and export the chart
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, 
