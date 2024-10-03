@@ -46,9 +46,6 @@ def transform_columns(df):
             df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
             if neg_log_col_name not in numeric_columns:
                 numeric_columns.append(neg_log_col_name)
-        
-        st.session_state['columns'] = df.columns.tolist()  # Update session state to refresh column options
-        st.experimental_rerun()  # Trigger rerun to update UI with new columns
     
     return df
 
@@ -114,10 +111,10 @@ def create_legends(ax, sizes, opacities, size_label=None, opacity_label=None):
 
     # Opacity legend
     if not isinstance(opacities, (int, float)):
-        unique_opacities = sorted(set([round(o, 2) for o in opacities]))
+        unique_opacities are sorted(set([round(o, 2) for o in opacities]))
         if len(unique_opacities) > 1:
-            opacity_values = [min(unique_opacities), np.median(unique_opacities), max(unique_opacities)]
-            for opacity in opacity_values:
+            opacity_values are [min(unique_opacities), np.median(unique_opacities), max(unique_opacities)]
+                        for opacity in opacity_values:
                 legend_elements.append(Line2D([0], [0], marker='o', color='gray',
                                              markerfacecolor='gray', markersize=10,
                                              alpha=opacity, linestyle='None'))
@@ -172,7 +169,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             cbar.set_label(legend_label)
         else:
             unique_categories = selected_data[color_col].unique()
-            colors = plt.colormaps[colormap](np.linspace(0, 1, len(unique_categories)))
+            colors = plt.get_cmap(colormap)(np.linspace(0, 1, len(unique_categories)))
             
             for category, color in zip(unique_categories, colors):
                 mask = selected_data[color_col] == category
@@ -220,6 +217,10 @@ if __name__ == "__main__":
         if df is not None:
             st.write("Data loaded successfully!")
             
+            # Automatically apply p-value transformation
+            df = transform_columns(df)
+            columns = df.columns.tolist()
+
             # Use tabs to organize the UI
             tab1, tab2, tab3 = st.tabs(["Data Preview", "Visualization Settings", "Results"])
             
@@ -228,12 +229,7 @@ if __name__ == "__main__":
 
             with tab2:
                 # Move all the setting widgets here
-                # Use st.form to batch all the inputs and reduce reruns
                 with st.form("visualization_settings"):
-                    # Transform columns
-                    df = transform_columns(df)
-                    columns = df.columns.tolist()
-
                     # Column selection
                     st.write("### Select Visualization Columns")
                     col1, col2, col3 = st.columns(3)
@@ -352,53 +348,54 @@ if __name__ == "__main__":
                         custom_y_label = st.text_input("Y-axis Label", y_col)
                     custom_legend_label = st.text_input("Legend Label", color_col)
 
+                    # Submit button for form
                     submit_button = st.form_submit_button("Generate Visualization")
 
-                with tab3:
-                    if submit_button:
-                        # Generate and display the plot
-                        fig, filtered_data, selected_data = plot_and_export_chart(
-                            df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
-                            custom_title, custom_x_label, custom_y_label, custom_legend_label,
-                            sort_by, selection_method, num_pathways, fig_width, fig_height, 
-                            min_size, max_size, min_opacity, max_opacity, 
-                            size_increase, opacity_increase, size_factor, opacity_factor
-                        )
-                        display_plot(fig)
+                # Plot and export chart upon form submission
+                if submit_button:
+                    fig, filtered_data, selected_data = plot_and_export_chart(
+                        df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
+                        custom_title, custom_x_label, custom_y_label, custom_legend_label,
+                        sort_by, selection_method, num_pathways, fig_width, fig_height, 
+                        min_size, max_size, min_opacity, max_opacity, 
+                        size_increase, opacity_increase, size_factor, opacity_factor
+                    )
+                    display_plot(fig)
 
-                        # Show filtered and selected data
-                        if selected_data is not None and filtered_data is not None:
-                            st.write("### Selected Data for Visualization")
-                            st.dataframe(selected_data)
-                            
-                            st.write("### All Filtered Data")
-                            st.dataframe(filtered_data)
+            with tab3:
+                # Show filtered and selected data
+                if selected_data is not None and filtered_data is not None:
+                    st.write("### Selected Data for Visualization")
+                    st.dataframe(selected_data)
+                    
+                    st.write("### All Filtered Data")
+                    st.dataframe(filtered_data)
 
-                        # Export options
-                        if fig is not None:
-                            st.write("### Export Options")
-                            export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
+                # Export options
+                if fig is not None:
+                    st.write("### Export Options")
+                    export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
 
-                            def save_and_download(format, dpi=600):
-                                buffer = BytesIO()
-                                fig.savefig(buffer, format=format, dpi=dpi, bbox_inches='tight')
-                                buffer.seek(0)
-                                plt.close()
-                                return buffer
+                    def save_and_download(format, dpi=600):
+                        buffer = BytesIO()
+                        fig.savefig(buffer, format=format, dpi=dpi, bbox_inches='tight')
+                        buffer.seek(0)
+                        plt.close()
+                        return buffer
 
-                            if export_as == "JPG":
-                                buffer = save_and_download("jpeg")
-                                st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
-                            elif export_as == "PNG":
-                                buffer = save_and_download("png")
-                                st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
-                            elif export_as == "SVG":
-                                buffer = save_and_download("svg")
-                                st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
-                            elif export_as == "TIFF":
-                                dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
-                                buffer = save_and_download("tiff", dpi=dpi)
-                                st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
+                    if export_as == "JPG":
+                        buffer = save_and_download("jpeg")
+                        st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
+                    elif export_as == "PNG":
+                        buffer = save_and_download("png")
+                        st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
+                    elif export_as == "SVG":
+                        buffer = save_and_download("svg")
+                        st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
+                    elif export_as == "TIFF":
+                        dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
+                        buffer = save_and_download("tiff", dpi=dpi)
+                        st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
 
                 # PyGWalker Integration
                 st.write("### Interactive Data Exploration with PyGWalker")
