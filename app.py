@@ -468,14 +468,14 @@ if __name__ == "__main__":
 
 
                     if st.button("Generate Visualization"):
-                fig, filtered_data, selected_data, discarded_data = plot_and_export_chart(
-                df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
-                custom_title, custom_x_label, custom_y_label, custom_legend_label,
-                sort_by, selection_method, num_pathways, fig_width, fig_height, 
-                min_size, max_size, min_opacity, max_opacity, 
-                size_increase, opacity_increase, size_factor, opacity_factor,
-                show_annotation_id, annotation_sort, annotation_font, annotation_size,
-                annotation_alignment, legend_fontsize, allow_more_rows
+                        fig, filtered_data, selected_data, discarded_data = plot_and_export_chart(
+                        df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
+                        custom_title, custom_x_label, custom_y_label, custom_legend_label,
+                        sort_by, selection_method, num_pathways, fig_width, fig_height, 
+                        min_size, max_size, min_opacity, max_opacity, 
+                        size_increase, opacity_increase, size_factor, opacity_factor,
+                        show_annotation_id, annotation_sort, annotation_font, annotation_size,
+                        annotation_alignment, legend_fontsize, allow_more_rows
             )
                         
                         if fig:
