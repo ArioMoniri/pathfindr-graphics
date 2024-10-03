@@ -9,6 +9,10 @@ from pygwalker.api.streamlit import init_streamlit_comm, StreamlitRenderer
 from functools import lru_cache
 import time
 
+
+# Set the page config at the very beginning
+st.set_page_config(layout="wide", page_title="Pathway Significance Visualization")
+
 # Set the title and description of the app
 st.set_page_config(layout="wide", page_title="Pathway Significance Visualization")
 st.title("Pathway Significance Visualization with PyGWalker Integration")
