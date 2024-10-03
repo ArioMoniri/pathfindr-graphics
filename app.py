@@ -164,7 +164,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         if show_annotation_id:
             annotations = selected_data.index.tolist()
         else:
-            annotations = elected_data[y_col] = selected_data[y_col].apply(clean_pathway_name)
+            annotations = selected_data[y_col] = selected_data[y_col].apply(clean_pathway_name)
 
         if annotation_sort == 'p-value':
             sort_order = selected_data[color_col].argsort()[::-1]  # Reverse to get descending order
