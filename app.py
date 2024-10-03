@@ -113,17 +113,22 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                          size_increase, opacity_increase, size_factor, opacity_factor,
                          show_annotation_id, annotation_sort, annotation_font, annotation_size,
                          annotation_alignment, legend_fontsize, allow_more_rows):
-    try:
+       try:
         # Handle annotations
         def clean_pathway_name(name):
             # Remove only the content within parentheses
-            return re.sub(r'\([^)]*\)', '', name).strip()
+            return re.sub(r'\([^)]*\)', '', str(name)).strip()
 
         selected_data, filtered_data, discarded_data = get_sorted_filtered_data(df, sort_by, ranges, 
                                                                selection_method, num_pathways, allow_more_rows)
         
         if selected_data.empty:
             st.warning("No data to display after applying filters.")
+            return None, filtered_data, selected_data, discarded_data
+
+        # Ensure y_col exists in selected_data
+        if y_col not in selected_data.columns:
+            st.error(f"Column '{y_col}' not found in the filtered data.")
             return None, filtered_data, selected_data, discarded_data
 
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
@@ -152,7 +157,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         if show_annotation_id:
             annotations = selected_data.index.tolist()
         else:
-            annotations = selected_data[y_col].apply(clean_pathway_name).tolist()
+            annotations = elected_data[y_col] = selected_data[y_col].apply(clean_pathway_name)
 
         if annotation_sort == 'p-value':
             sort_order = selected_data[color_col].argsort()[::-1]  # Reverse to get descending order
@@ -467,8 +472,8 @@ if __name__ == "__main__":
 
 
 
-                    if submit_button:
-                        fig, filtered_data, selected_data, discarded_data = plot_and_export_chart(
+                   if submit_button:
+                    result = plot_and_export_chart(
                         df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
                         custom_title, custom_x_label, custom_y_label, custom_legend_label,
                         sort_by, selection_method, num_pathways, fig_width, fig_height, 
@@ -476,16 +481,22 @@ if __name__ == "__main__":
                         size_increase, opacity_increase, size_factor, opacity_factor,
                         show_annotation_id, annotation_sort, annotation_font, annotation_size,
                         annotation_alignment, legend_fontsize, allow_more_rows
-            )
+                    )
+                    
+                    if result[0] is not None:  # Check if fig is not None
+                        fig, filtered_data, selected_data, discarded_data = result
+                        st.pyplot(fig)
                         
-                        if fig:
-                            st.pyplot(fig)
-                            
-                            # Display discarded rows information
-                            st.write("### Rows Discarded Due to Filtering")
+                        # Display discarded rows information
+                        st.write("### Rows Discarded Due to Filtering")
+                        if discarded_data:
                             for col, discarded in discarded_data.items():
                                 st.write(f"Discarded by {col} filter:")
                                 st.dataframe(discarded)
+                        else:
+                            st.write("No rows were discarded by filtering.")
+                    else:
+                        st.error("Failed to generate the visualization. Please check your inputs and try again.")
         
         
                         
