@@ -460,10 +460,7 @@ if __name__ == "__main__":
                     # Submit button for form
                     submit_button = st.form_submit_button("Generate Visualization")
 
-                # Plot and export chart upon form submission
-      import streamlit as st
 
-# ... [other imports and setup] ...
 
 # In your main Streamlit app
 allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
