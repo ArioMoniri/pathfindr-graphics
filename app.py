@@ -265,9 +265,9 @@ if __name__ == "__main__":
                     with col2:
                         max_size = st.slider("Max size", min_value=100, max_value=1000, value=600)
                     with col3:
-                        min_opacity = st.slider("Min opacity", min_value=0.0, max_value=1.0, value=0.5)
+                        min_opacity = st.slider("Min opacity", min_value=0.0, max_value=1.0, value=0.5, step=0.1)
                     with col4:
-                        max_opacity = st.slider("Max opacity", min_value=0.0, max_value=1.0, value=1.0)
+                        max_opacity = st.slider("Max opacity", min_value=0.0, max_value=1.0, value=1.0, step=0.1)
 
                     # Sensitivity for size and opacity
                     st.write("### Sensitivity for Size and Opacity Changes")
@@ -306,6 +306,7 @@ if __name__ == "__main__":
                         fig_width = st.slider("Figure width", min_value=6, max_value=20, value=12)
                     with col2:
                         fig_height = st.slider("Figure height", min_value=4, max_value=16, value=8)
+
 
                     # Range sliders for numeric columns
                     st.write("### Range Filters")
