@@ -198,7 +198,14 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None
-
+# Add the display_plot function
+def display_plot(fig):
+    if fig is not None:
+        buf = BytesIO()
+        fig.savefig(buf, format="png", bbox_inches='tight', dpi=300)
+        buf.seek(0)
+        st.image(buf)
+        
 # Main execution
 if __name__ == "__main__":
     uploaded_file = st.file_uploader("Upload your data file", type=["xlsx"])
