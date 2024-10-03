@@ -67,6 +67,17 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     
     return selected_data, filtered_data
 
+
+
+
+def display_plot(fig):
+    if fig is not None:
+        buf = BytesIO()
+        fig.savefig(buf, format="png", bbox_inches='tight', dpi=300)
+        buf.seek(0)
+        st.image(buf)
+
+
 # Updated create_legends function
 def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
     legend_elements = []
