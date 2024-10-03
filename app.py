@@ -113,7 +113,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                          size_increase, opacity_increase, size_factor, opacity_factor,
                          show_annotation_id, annotation_sort, annotation_font, annotation_size,
                          annotation_alignment, legend_fontsize):
-    try:
+try:
         selected_data, filtered_data = get_sorted_filtered_data(df, sort_by, ranges, 
                                                                selection_method, num_pathways)
         
@@ -130,23 +130,32 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             sizes = np.full(len(selected_data), (min_size + max_size) / 2)
         
-# Handle annotations
-        if show_annotation_id:
-            annotations = selected_data.index
+        # Handle opacity values
+        if opacity_col != "None":
+            opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
+            opacities = normalize_data_vectorized(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
         else:
-            annotations = selected_data[y_col].str.split(':', expand=True).iloc[:, -1].str.strip()
+            opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
+
+        x_values = pd.to_numeric(selected_data[x_col], errors='coerce').values
+
+        # Handle annotations
+        if show_annotation_id:
+            annotations = selected_data.index.tolist()
+        else:
+            annotations = selected_data[y_col].str.split(':', expand=True).iloc[:, -1].str.strip().tolist()
 
         if annotation_sort == 'p-value':
             sort_order = selected_data[color_col].argsort()[::-1]  # Reverse to get descending order
         elif annotation_sort == 'name_length':
-            sort_order = selected_data[y_col].astype(str).str.len().argsort()
+            sort_order = pd.Series(annotations).str.len().argsort()
         else:
             sort_order = np.arange(len(selected_data))
 
         # Sort all relevant data
-        annotations = annotations[sort_order].tolist()  # Convert to list to avoid 'iloc' issues
+        annotations = [annotations[i] for i in sort_order]
         x_values = x_values[sort_order]
-        y_values = np.arange(len(selected_data))  # Use range for y_values
+        y_values = np.arange(len(selected_data))
         sizes = sizes[sort_order] if isinstance(sizes, np.ndarray) else sizes
         opacities = opacities[sort_order] if isinstance(opacities, np.ndarray) else opacities
         selected_data = selected_data.iloc[sort_order]
@@ -207,7 +216,6 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None
-
 # Main execution
 if __name__ == "__main__":
     st.set_page_config(layout="wide", page_title="Pathway Significance Visualization")
