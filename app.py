@@ -44,8 +44,6 @@ def transform_columns(df):
         for col in pvalue_columns:
             neg_log_col_name = f'-log10({col})'
             df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
-            if neg_log_col_name not in numeric_columns:
-                numeric_columns.append(neg_log_col_name)
     
     return df
 
@@ -123,7 +121,6 @@ def create_legends(ax, sizes, opacities, size_label=None, opacity_label=None):
     if legend_elements:
         ax.legend(legend_elements, legend_labels, loc='upper center', 
                   bbox_to_anchor=(0.5, 1.15), ncol=2, frameon=True, title="Size and Opacity")
-        
 
 # Function to plot and export the chart
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, 
@@ -155,10 +152,15 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             opacities = (min_opacity + max_opacity) / 2
 
-        # Ensure x_col and y_col are numeric
+        # Ensure x_col and y_col are numeric, handle non-numeric (categorical) values explicitly
         x_values = pd.to_numeric(selected_data[x_col], errors='coerce')
-        y_values = pd.to_numeric(selected_data[y_col], errors='coerce') if pd.api.types.is_numeric_dtype(selected_data[y_col]) else selected_data[y_col]
+        if pd.api.types.is_numeric_dtype(selected_data[y_col]):
+            y_values = pd.to_numeric(selected_data[y_col], errors='coerce')
+        else:
+            # Convert non-numeric y_col to categorical and assign numeric labels
+            y_values = pd.Categorical(selected_data[y_col]).codes
 
+        # Plot the data
         if pd.api.types.is_numeric_dtype(selected_data[color_col]):
             scatter = ax.scatter(x_values, y_values,
                                 c=selected_data[color_col],
@@ -171,7 +173,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             unique_categories = selected_data[color_col].unique()
             colors = plt.get_cmap(colormap)(np.linspace(0, 1, len(unique_categories)))
-            
+
             for category, color in zip(unique_categories, colors):
                 mask = selected_data[color_col] == category
                 ax.scatter(x_values[mask], y_values[mask],
