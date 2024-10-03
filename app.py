@@ -8,7 +8,7 @@ from matplotlib.lines import Line2D
 from pygwalker.api.streamlit import init_streamlit_comm, StreamlitRenderer
 from functools import lru_cache
 import time
-
+import re
 
 
 
