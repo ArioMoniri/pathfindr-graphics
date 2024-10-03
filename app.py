@@ -116,7 +116,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     try:
         # Handle annotations
         def clean_pathway_name(name):
-            # Remove only the content within parentheses
+            # Remove content within parentheses, including the parentheses
             return re.sub(r'\([^)]*\)', '', str(name)).strip()
 
         selected_data, filtered_data, discarded_data = get_sorted_filtered_data(df, sort_by, ranges, 
@@ -132,6 +132,13 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             return None, filtered_data, selected_data, discarded_data
 
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+
+        # Apply clean_pathway_name to y_col if show_annotation_id is False
+        if not show_annotation_id:
+            selected_data[y_col] = selected_data[y_col].apply(clean_pathway_name)
+
+        # Prepare annotations
+        annotations = selected_data[y_col].tolist()
         
         # Handle size values
         if size_col != "None":
@@ -448,7 +455,7 @@ if __name__ == "__main__":
                     st.write("### Annotation Options")
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        show_annotation_id = st.checkbox("Show ID in annotations", value=True)
+                        show_annotation_id = st.checkbox("Show Annotation IDs", value=False)
                     with col2:
                         annotation_sort = st.selectbox("Sort annotations by", ["p-value", "name_length", "none"])
                     with col3:
