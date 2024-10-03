@@ -219,7 +219,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         plt.tight_layout()
         return fig, filtered_data, selected_data
-    except Exception as e:
+       except Exception as e:
         st.error(f"Error creating plot: {str(e)}")
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
