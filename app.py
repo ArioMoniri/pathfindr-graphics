@@ -130,42 +130,31 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             sizes = np.full(len(selected_data), (min_size + max_size) / 2)
         
-        # Handle opacity values
-        if opacity_col != "None":
-            opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
-            opacities = normalize_data_vectorized(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
-        else:
-            opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
-
-        x_values = pd.to_numeric(selected_data[x_col], errors='coerce').values
-        if pd.api.types.is_numeric_dtype(selected_data[y_col]):
-            y_values = pd.to_numeric(selected_data[y_col], errors='coerce').values
-        else:
-            y_values = np.arange(len(selected_data))  # Use range instead of categorical codes
-
-        # Handle annotations
+# Handle annotations
         if show_annotation_id:
             annotations = selected_data.index
         else:
-            annotations = selected_data[y_col]
+            annotations = selected_data[y_col].str.split(':', expand=True).iloc[:, -1].str.strip()
 
         if annotation_sort == 'p-value':
-            sort_order = selected_data[color_col].argsort()
+            sort_order = selected_data[color_col].argsort()[::-1]  # Reverse to get descending order
         elif annotation_sort == 'name_length':
             sort_order = selected_data[y_col].astype(str).str.len().argsort()
         else:
             sort_order = np.arange(len(selected_data))
 
-        annotations = annotations.iloc[sort_order]
+        # Sort all relevant data
+        annotations = annotations[sort_order].tolist()  # Convert to list to avoid 'iloc' issues
         x_values = x_values[sort_order]
-        y_values = y_values[sort_order]
+        y_values = np.arange(len(selected_data))  # Use range for y_values
         sizes = sizes[sort_order] if isinstance(sizes, np.ndarray) else sizes
         opacities = opacities[sort_order] if isinstance(opacities, np.ndarray) else opacities
+        selected_data = selected_data.iloc[sort_order]
 
         # Plot the data
         if pd.api.types.is_numeric_dtype(selected_data[color_col]):
             scatter = ax.scatter(x_values, y_values,
-                                c=selected_data[color_col].iloc[sort_order],
+                                c=selected_data[color_col],
                                 cmap=colormap,
                                 s=sizes,
                                 alpha=opacities,
@@ -176,9 +165,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             unique_categories = selected_data[color_col].unique()
             colors = plt.get_cmap(colormap)(np.linspace(0, 1, len(unique_categories)))
-
             for category, color in zip(unique_categories, colors):
-                mask = selected_data[color_col].iloc[sort_order] == category
+                mask = selected_data[color_col] == category
                 ax.scatter(x_values[mask], y_values[mask],
                           label=category,
                           color=color,
@@ -188,15 +176,21 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             leg = ax.legend(title=legend_label, bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=legend_fontsize)
             plt.setp(leg.get_title(), fontsize=legend_fontsize)
 
-        # Remove y-axis ticks and labels
-        ax.set_yticks([])
-        ax.set_yticklabels([])
+        # Set y-axis ticks and labels
+        ax.set_yticks(y_values)
+        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font)
 
-        # Add annotations next to the data points
-        for i, (x, y, label) in enumerate(zip(x_values, y_values, annotations)):
-            ax.annotate(str(label), (x, y), xytext=(5, 0), 
-                        textcoords='offset points', ha=annotation_alignment, va='center',
+        # Adjust layout to make room for labels
+        plt.subplots_adjust(left=0.3)
+
+        # Add annotations on the side
+        for i, label in enumerate(annotations):
+            ax.annotate(label, (0, i), xytext=(-5, 0), 
+                        textcoords='offset points', ha='right', va='center',
                         fontsize=annotation_size, fontfamily=annotation_font)
+
+        # Invert y-axis to match the image
+        ax.invert_yaxis()
 
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
         ax.set_title(title, fontsize=legend_fontsize)
