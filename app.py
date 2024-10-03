@@ -40,12 +40,11 @@ def transform_columns(df):
 
     if pvalue_columns:
         st.info("Selected p-value columns will be transformed using -log10.")
-
         for col in pvalue_columns:
             neg_log_col_name = f'-log10({col})'
             df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
             st.write(f"Added column: {neg_log_col_name}")
-    
+
     return df
 
 # Function to normalize the data for size and opacity
@@ -228,7 +227,7 @@ if __name__ == "__main__":
                 with st.form("visualization_settings"):
                     # Transform columns
                     df = transform_columns(df)
-                    columns = df.columns.tolist()
+                    columns = df.columns.tolist()  # Update column list after transformation
 
                     # Column selection
                     st.write("### Select Visualization Columns")
