@@ -112,7 +112,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                          min_size, max_size, min_opacity, max_opacity, 
                          size_increase, opacity_increase, size_factor, opacity_factor,
                          show_annotation_id, annotation_sort, annotation_font, annotation_size,
-                         annotation_alignment, legend_fontsize, allow_more_rows):
+                         annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending=True):
     try:
         # Prepare the filtered and sorted data
         selected_data, filtered_data, discarded_data = get_sorted_filtered_data(
@@ -142,11 +142,11 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Prepare annotations
         annotations = selected_data[y_col].tolist()
 
-        # Sorting annotations and the corresponding data based on the selected sorting option
+        # Sorting annotations and corresponding data
         if annotation_sort == 'p-value':
-            sort_order = selected_data[color_col].argsort()[::-1]
+            sort_order = selected_data[color_col].argsort(ascending=sort_order_ascending)
         elif annotation_sort == 'name_length':
-            sort_order = selected_data[y_col].str.len().argsort().values
+            sort_order = selected_data[y_col].str.len().argsort(ascending=sort_order_ascending)
         else:
             sort_order = np.arange(len(selected_data))
 
@@ -185,12 +185,15 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                             alpha=opacities,
                             edgecolors='black')
 
-        # Set y-axis ticks and labels
+        # Set y-axis ticks and labels, align labels outside of the plot area
         ax.set_yticks(y_values)
-        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha=annotation_alignment)
+        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha='right', va='center')
+
+        # Align the labels to the left of the plot by adjusting plot margins
+        ax.tick_params(axis='y', which='major', pad=10)  # Increase padding between tick labels and axis
 
         # Adjust layout to make room for labels
-        plt.subplots_adjust(left=0.4, right=0.8)  # Increase left margin for pathway names
+        plt.subplots_adjust(left=0.35, right=0.8)  # Increase left margin for pathway names
 
         # Set X and Y axis labels
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
@@ -218,7 +221,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None, {}
-
+        
 def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
     # Create legend for size and opacity by plotting invisible reference points
     legend_elements = []
