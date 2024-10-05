@@ -155,6 +155,21 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         x_values = selected_data[x_col].values[sort_order]
         y_values = np.arange(len(annotations))
 
+        # Initialize sizes and opacities
+        sizes = np.full(len(selected_data), (min_size + max_size) / 2) if size_col == "None" else None
+        opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2) if opacity_col == "None" else None
+
+        # Handle size values
+        if size_col != "None":
+            sizes = pd.to_numeric(selected_data[size_col], errors='coerce')
+            sizes = normalize_data_vectorized(sizes, min_size, max_size, size_factor, size_increase)
+
+        # Handle opacity values
+        if opacity_col != "None":
+            opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
+            opacities = normalize_data_vectorized(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
+
+        # Re-order sizes and opacities based on sorting
         if isinstance(sizes, np.ndarray):
             sizes = sizes[sort_order]
         if isinstance(opacities, np.ndarray):
