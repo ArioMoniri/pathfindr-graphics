@@ -92,7 +92,7 @@ def display_plot(fig):
 
 
 # Updated create_legends function
-def create_legends(fig, ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
+def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
     legend_elements = []
     legend_labels = []
 
