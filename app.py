@@ -115,12 +115,10 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                          annotation_alignment, legend_fontsize, allow_more_rows):
     try:
         # Handle annotations
-        def clean_pathway_name(name):
-            # Remove content within parentheses, including the parentheses
-            return re.sub(r'\([^)]*\)', '', str(name)).strip()
-
-        selected_data, filtered_data, discarded_data = get_sorted_filtered_data(df, sort_by, ranges, 
-                                                               selection_method, num_pathways, allow_more_rows)
+        if show_annotation_id:
+            annotations = selected_data.index.tolist()
+        else:
+            annotations = selected_data[y_col].apply(clean_pathway_name).tolist()
         
         if selected_data.empty:
             st.warning("No data to display after applying filters.")
@@ -174,27 +172,22 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             sort_order = np.arange(len(selected_data))
 
         # Sort all relevant data
-        valid_indices = [i for i in sort_order if i < len(annotations)]
+        valid_indices = [i for i in sort_order if i < len(annotations) and i >= 0]
+
+
+        # Ensure all relevant arrays are correctly synchronized and of equal length
         annotations = [annotations[i] for i in valid_indices]
         x_values = x_values[valid_indices]
         y_values = np.arange(len(annotations))
-        
+        selected_data = selected_data.iloc[:min_length]
+        # Ensure sizes and opacities are arrays and also apply valid_indices filtering
         if isinstance(sizes, np.ndarray):
             sizes = sizes[valid_indices]
         if isinstance(opacities, np.ndarray):
             opacities = opacities[valid_indices]
-
+        # Update selected_data based on valid_indices
         selected_data = selected_data.iloc[valid_indices]
 
-        # Ensure all arrays have the same length
-        min_length = min(len(x_values), len(y_values), len(selected_data))
-        x_values = x_values[:min_length]
-        y_values = y_values[:min_length]
-        selected_data = selected_data.iloc[:min_length]
-        if isinstance(sizes, np.ndarray):
-            sizes = sizes[:min_length]
-        if isinstance(opacities, np.ndarray):
-            opacities = opacities[:min_length]
         # Adjust figure size to accommodate long pathway names
         fig_width += 5  # Increase width to make room for pathway names
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
