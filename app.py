@@ -131,14 +131,15 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         filtered_data = df.copy()
         for col, (min_val, max_val) in ranges.items():
             filtered_data = filtered_data[(filtered_data[col] >= min_val) & (filtered_data[col] <= max_val)]
-        
+
         # Sort by the selected column
         filtered_data = filtered_data.sort_values(by=sort_by, ascending=sort_order_ascending)
 
-        # Select the top pathways based on the selection method and compensate if 'allow_more_rows' is checked
+        # Compensate rows if allow_more_rows is enabled and the filtered data is less than num_pathways
         if len(filtered_data) < num_pathways and allow_more_rows:
             num_pathways = len(filtered_data)
         
+        # Select top pathways
         if selection_method == 'Top (Highest Values)':
             selected_data = filtered_data.tail(num_pathways)
         elif selection_method == 'Bottom (Lowest Values)':
@@ -165,9 +166,12 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             annotations = [re.sub(r'\(R-HSA-\d+\)', '', name).strip() for name in annotations]
             annotations = [re.sub(r'\(DOID:\d+\)', '', name).strip() for name in annotations]
 
-        # Set annotation alignment
+        # Place the annotations outside the plot
         ax.set_yticks(y_values)
         ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha=annotation_alignment)
+
+        # Adjust margins to ensure annotations are not inside the plot area
+        plt.subplots_adjust(left=0.35 if annotation_alignment == 'right' else 0.15, right=0.85)
 
         # Handle size and opacity values
         if size_col != "None":
@@ -185,11 +189,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Plot scatter
         scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, s=sizes, alpha=opacities, edgecolors='black')
 
-        # Adjust layout to ensure annotations don't overlap the plot
-        ax.tick_params(axis='y', which='major', pad=10)
-        plt.subplots_adjust(left=0.35 if annotation_alignment == 'right' else 0.15, right=0.8)
-
-        # Set labels and title
+        # Set X and Y axis labels
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
         ax.set_ylabel(y_label, fontsize=legend_fontsize)
         ax.set_title(title, fontsize=legend_fontsize)
@@ -339,8 +339,7 @@ if __name__ == "__main__":
                         df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
 
 with tab2:
-    allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
-    # Move all the setting widgets here
+        # Move all the setting widgets here
     with st.form("visualization_settings"):
         columns = df.columns.tolist()
 
