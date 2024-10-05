@@ -45,12 +45,14 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     filtered_data = df.copy()
     discarded_data = {}
 
+    # Apply filters and collect discarded data
     for col, (min_val, max_val) in ranges.items():
         if pd.api.types.is_numeric_dtype(df[col]):
             discarded = filtered_data[(filtered_data[col] < min_val) | (filtered_data[col] > max_val)]
             filtered_data = filtered_data[(filtered_data[col] >= min_val) & (filtered_data[col] <= max_val)]
             discarded_data[col] = discarded
 
+    # Sort the filtered data
     filtered_data = filtered_data.sort_values(by=sort_by, ascending=False)
 
     # Select data based on the selection method
@@ -65,13 +67,15 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
             filtered_data.tail(half_num)
         ])
     else:  # Middle
-        start_idx = (len(filtered_data) - num_pathways) // 2
-        selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
+        start_idx = max(0, (len(filtered_data) - num_pathways) // 2)
+        end_idx = min(len(filtered_data), start_idx + num_pathways)
+        selected_data = filtered_data.iloc[start_idx:end_idx]
 
     # If 'allow_more_rows' is True and we have fewer rows than requested, add from discarded data
     if allow_more_rows and len(selected_data) < num_pathways:
         remaining_num = num_pathways - len(selected_data)
         discarded_combined = pd.concat(discarded_data.values()).drop_duplicates()
+        discarded_combined = discarded_combined[~discarded_combined.index.isin(selected_data.index)]
         discarded_combined = discarded_combined.sort_values(by=sort_by, ascending=False)
         extra_data = discarded_combined.head(remaining_num)
         selected_data = pd.concat([selected_data, extra_data]).sort_values(by=sort_by, ascending=False)
