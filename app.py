@@ -161,35 +161,35 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             return None, None, None, {}
 
         # Prepare data for plotting
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+        
+        # Plot the scatter points
+        scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, 
+                             s=sizes, alpha=opacities, edgecolors='black')
     
-    # Plot the scatter points
-    scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, 
-                         s=sizes, alpha=opacities, edgecolors='black')
-
-    # Set the y-ticks and labels
-    ax.set_yticks(y_values)
-    ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font)
-
-    # Adjust the subplot to make room for the annotations
-    plt.subplots_adjust(left=0.4)  # Adjust this value as needed
-
-    # Set labels and title
-    ax.set_xlabel(x_label, fontsize=legend_fontsize)
-    ax.set_ylabel(y_label, fontsize=legend_fontsize)
-    ax.set_title(title, fontsize=legend_fontsize + 2)
-
-    # Add colorbar
-    cbar = plt.colorbar(scatter)
-    cbar.set_label(legend_label, fontsize=legend_fontsize)
-
-    # Create legends for size and opacity
-    create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
-
-    # Adjust layout
-    plt.tight_layout()
-
-    return fig, filtered_data, selected_data, discarded_data
+        # Set the y-ticks and labels
+        ax.set_yticks(y_values)
+        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font)
+    
+        # Adjust the subplot to make room for the annotations
+        plt.subplots_adjust(left=0.4)  # Adjust this value as needed
+    
+        # Set labels and title
+        ax.set_xlabel(x_label, fontsize=legend_fontsize)
+        ax.set_ylabel(y_label, fontsize=legend_fontsize)
+        ax.set_title(title, fontsize=legend_fontsize + 2)
+    
+        # Add colorbar
+        cbar = plt.colorbar(scatter)
+        cbar.set_label(legend_label, fontsize=legend_fontsize)
+    
+        # Create legends for size and opacity
+        create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
+    
+        # Adjust layout
+        plt.tight_layout()
+    
+        return fig, filtered_data, selected_data, discarded_data
 
         # Adjust X-axis limits to add padding
         ax.set_xlim([min(x_values) - 20, max(x_values) + 20])
