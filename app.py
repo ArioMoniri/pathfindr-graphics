@@ -40,34 +40,46 @@ def normalize_data_vectorized(value, min_val, max_val, factor=1.0, increase=True
 
 # Optimized get_sorted_filtered_data function
 @st.cache_data
-def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways):
+# Updated get_sorted_filtered_data to handle "Allow more rows" correctly
+def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways, allow_more_rows):
     filtered_data = df.copy()
+    discarded_data = {}
+
+    # Apply filters to the data
     for col, (min_val, max_val) in ranges.items():
         if pd.api.types.is_numeric_dtype(df[col]):
+            discarded = filtered_data[(filtered_data[col] < min_val) | (filtered_data[col] > max_val)]
             filtered_data = filtered_data[(filtered_data[col] >= min_val) & (filtered_data[col] <= max_val)]
-    
-    filtered_data = filtered_data.sort_values(by=sort_by)
-    
-    if num_pathways > len(filtered_data):
-        num_pathways = len(filtered_data)
-    
-    if selection_method == 'Top (Highest Values)':
-        selected_data = filtered_data.tail(num_pathways)
-    elif selection_method == 'Bottom (Lowest Values)':
-        selected_data = filtered_data.head(num_pathways)
-    elif selection_method == 'Both Ends':
-        half_num = num_pathways // 2
-        selected_data = pd.concat([
-            filtered_data.head(half_num),
-            filtered_data.tail(half_num)
-        ])
-    else:  # Middle
-        start_idx = (len(filtered_data) - num_pathways) // 2
-        selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
-    
-    return selected_data, filtered_data
+            discarded_data[col] = discarded
 
+    filtered_data = filtered_data.sort_values(by=sort_by, ascending=False)
 
+    # Select data based on the selection method
+    if len(filtered_data) >= num_pathways:
+        if selection_method == 'Top (Highest Values)':
+            selected_data = filtered_data.head(num_pathways)
+        elif selection_method == 'Bottom (Lowest Values)':
+            selected_data = filtered_data.tail(num_pathways)
+        elif selection_method == 'Both Ends':
+            half_num = num_pathways // 2
+            selected_data = pd.concat([
+                filtered_data.head(half_num),
+                filtered_data.tail(half_num)
+            ])
+        else:  # Middle
+            start_idx = (len(filtered_data) - num_pathways) // 2
+            selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
+    else:
+        selected_data = filtered_data.copy()
+
+    # If 'allow_more_rows' is True, attempt to compensate by adding rows from discarded data
+    if allow_more_rows and len(selected_data) < num_pathways:
+        remaining_num = num_pathways - len(selected_data)
+        extra_data = pd.concat(discarded_data.values(), axis=0).sort_values(by=sort_by, ascending=False)
+        extra_data = extra_data.head(remaining_num)
+        selected_data = pd.concat([selected_data, extra_data])
+
+    return selected_data, filtered_data, discarded_data
 
 
 def display_plot(fig):
@@ -181,11 +193,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax.set_yticks(y_values)
         ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha=annotation_alignment)
 
-        # Align the labels outside of the plot by adjusting plot margins
-        ax.tick_params(axis='y', which='major', pad=10)  # Increase padding between tick labels and axis
-
-        # Adjust layout to make room for labels
-        plt.subplots_adjust(left=0.35, right=0.8)  # Increase left margin for pathway names
+        # Adjust layout to make room for labels outside the plot area
+        plt.subplots_adjust(left=0.45, right=0.8)  # Increased left margin for pathway names
 
         # Set X and Y axis labels
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
@@ -213,7 +222,6 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None, {}
-
 
         
         
@@ -341,7 +349,6 @@ if __name__ == "__main__":
 
 with tab2:
     allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
-
     # Move all the setting widgets here
     with st.form("visualization_settings"):
         columns = df.columns.tolist()
