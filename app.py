@@ -132,7 +132,10 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Apply clean_pathway_name to y_col if show_annotation_id is False
         def clean_pathway_name(name):
-            return re.sub(r'(R-HSA-\d+|DOID:\d+):\s*', '', str(name))
+            # Simple method to remove the content within parentheses, including parentheses
+            if '(' in name:
+                name = name.split('(')[0].strip()
+            return name
 
         if not show_annotation_id:
             selected_data[y_col] = selected_data[y_col].apply(clean_pathway_name)
@@ -224,7 +227,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None, {}
-
+        
 def create_legends(fig, sizes, opacities, size_col, opacity_col, legend_fontsize):
     legend_elements = []
     legend_labels = []
