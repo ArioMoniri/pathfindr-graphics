@@ -118,6 +118,7 @@ def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
         plt.setp(leg.get_title(), multialignment='center', fontsize=legend_fontsize)
 
 # Updated plot_and_export_chart function
+
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, 
                          colormap, title, x_label, y_label, legend_label, sort_by, 
                          selection_method, num_pathways, fig_width, fig_height, 
@@ -126,102 +127,93 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                          show_annotation_id, annotation_sort, annotation_font, annotation_size,
                          annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending=True):
     try:
-        # Get the filtered and sorted data
-        selected_data, filtered_data, discarded_data = get_sorted_filtered_data(
-            df, sort_by, ranges, selection_method, num_pathways, allow_more_rows
-        )
+        # Apply filters based on ranges
+        filtered_data = df.copy()
+        for col, (min_val, max_val) in ranges.items():
+            filtered_data = filtered_data[(filtered_data[col] >= min_val) & (filtered_data[col] <= max_val)]
+        
+        # Sort by the selected column
+        filtered_data = filtered_data.sort_values(by=sort_by, ascending=sort_order_ascending)
+
+        # Select the top pathways based on the selection method and compensate if 'allow_more_rows' is checked
+        if len(filtered_data) < num_pathways and allow_more_rows:
+            num_pathways = len(filtered_data)
+        
+        if selection_method == 'Top (Highest Values)':
+            selected_data = filtered_data.tail(num_pathways)
+        elif selection_method == 'Bottom (Lowest Values)':
+            selected_data = filtered_data.head(num_pathways)
+        elif selection_method == 'Both Ends':
+            half_num = num_pathways // 2
+            selected_data = pd.concat([filtered_data.head(half_num), filtered_data.tail(half_num)])
+        else:  # Middle
+            start_idx = (len(filtered_data) - num_pathways) // 2
+            selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
 
         if selected_data.empty:
             st.warning("No data to display after applying filters.")
-            return None, filtered_data, selected_data, discarded_data
+            return None, None, None, {}
 
-        # Ensure y_col exists in selected_data
-        if y_col not in selected_data.columns:
-            st.error(f"Column '{y_col}' not found in the filtered data.")
-            return None, filtered_data, selected_data, discarded_data
-
+        # Prepare data for plotting
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-
-        # Handle cleaning of pathway names
-        def clean_pathway_name(name):
-            name = re.sub(r'\(R-HSA-\d+\)', '', name)  # Remove R-HSA IDs
-            name = re.sub(r'\(DOID:\d+\)', '', name)   # Remove DOID IDs
-            return name.strip()
-
-        if not show_annotation_id:
-            selected_data[y_col] = selected_data[y_col].apply(clean_pathway_name)
-
-        # Prepare annotations
+        y_values = np.arange(len(selected_data))
+        x_values = selected_data[x_col].values
         annotations = selected_data[y_col].tolist()
 
-        # Sort annotations and corresponding data
-        if annotation_sort == 'p-value':
-            sort_order = selected_data[color_col].sort_values(ascending=sort_order_ascending).index
-        elif annotation_sort == 'name_length':
-            sort_order = selected_data[y_col].str.len().sort_values(ascending=sort_order_ascending).index
-        else:
-            sort_order = selected_data.index
+        # Handle annotations (removing IDs if necessary)
+        if not show_annotation_id:
+            annotations = [re.sub(r'\(R-HSA-\d+\)', '', name).strip() for name in annotations]
+            annotations = [re.sub(r'\(DOID:\d+\)', '', name).strip() for name in annotations]
 
-        # Safely reorder annotations and other data
-        annotations = selected_data.loc[sort_order, y_col].tolist()
-        x_values = selected_data.loc[sort_order, x_col].values
-        y_values = np.arange(len(annotations))
-
-        # Initialize sizes and opacities
-        sizes = np.full(len(selected_data), (min_size + max_size) / 2) if size_col == "None" else None
-        opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2) if opacity_col == "None" else None
-
-        # Handle size values
-        if size_col != "None":
-            sizes = pd.to_numeric(selected_data.loc[sort_order, size_col], errors='coerce')
-            sizes = normalize_data_vectorized(sizes, min_size, max_size, size_factor, size_increase)
-
-        # Handle opacity values
-        if opacity_col != "None":
-            opacities = pd.to_numeric(selected_data.loc[sort_order, opacity_col], errors='coerce')
-            opacities = normalize_data_vectorized(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
-
-        # Plot the data
-        scatter = ax.scatter(x_values, y_values,
-                            c=selected_data.loc[sort_order, color_col],
-                            cmap=colormap,
-                            s=sizes,
-                            alpha=opacities,
-                            edgecolors='black')
-
-        # Set y-axis ticks and labels, adjust alignment and font
+        # Set annotation alignment
         ax.set_yticks(y_values)
         ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha=annotation_alignment)
 
-        # Adjust layout to give enough space for the labels
+        # Handle size and opacity values
+        if size_col != "None":
+            sizes = pd.to_numeric(selected_data[size_col], errors='coerce')
+            sizes = normalize_data_vectorized(sizes, min_size, max_size, size_factor, size_increase)
+        else:
+            sizes = np.full(len(selected_data), (min_size + max_size) / 2)
+
+        if opacity_col != "None":
+            opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
+            opacities = normalize_data_vectorized(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
+        else:
+            opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
+
+        # Plot scatter
+        scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, s=sizes, alpha=opacities, edgecolors='black')
+
+        # Adjust layout to ensure annotations don't overlap the plot
+        ax.tick_params(axis='y', which='major', pad=10)
         plt.subplots_adjust(left=0.35 if annotation_alignment == 'right' else 0.15, right=0.8)
 
-        # Set X and Y axis labels
+        # Set labels and title
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
         ax.set_ylabel(y_label, fontsize=legend_fontsize)
         ax.set_title(title, fontsize=legend_fontsize)
-
-        # Invert Y-axis
         ax.invert_yaxis()
 
         # Add colorbar
         cbar = plt.colorbar(scatter, ax=ax)
         cbar.set_label(legend_label, fontsize=legend_fontsize)
 
-        # Adjust axis limits to ensure circles are not too close to the Y-axis
-        ax.set_xlim([min(x_values) - 20, max(x_values) + 20])  # Adding padding to the x-axis
-        ax.set_ylim([min(y_values) - 1, max(y_values) + 1])
+        # Adjust X-axis limits to add padding
+        ax.set_xlim([min(x_values) - 20, max(x_values) + 20])
 
-        # Add size and opacity legends
-        create_legends(fig, sizes, opacities, size_col, opacity_col, legend_fontsize)
+        # Add legends for size and opacity
+        create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
         plt.tight_layout()
-        return fig, filtered_data, selected_data, discarded_data
+        return fig, filtered_data, selected_data, {}
+    
     except Exception as e:
         st.error(f"Error in plot_and_export_chart: {str(e)}")
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None, {}
+
         
         
 def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
