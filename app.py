@@ -126,7 +126,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                          show_annotation_id, annotation_sort, annotation_font, annotation_size,
                          annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending=True):
     try:
-        # Prepare the filtered and sorted data
+        # Get the filtered and sorted data
         selected_data, filtered_data, discarded_data = get_sorted_filtered_data(
             df, sort_by, ranges, selection_method, num_pathways, allow_more_rows
         )
@@ -142,7 +142,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-        # Apply clean_pathway_name to y_col if show_annotation_id is False
+        # Handle cleaning of pathway names
         def clean_pathway_name(name):
             name = re.sub(r'\(R-HSA-\d+\)', '', name)  # Remove R-HSA IDs
             name = re.sub(r'\(DOID:\d+\)', '', name)   # Remove DOID IDs
@@ -154,7 +154,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Prepare annotations
         annotations = selected_data[y_col].tolist()
 
-        # Sorting annotations and corresponding data
+        # Sort annotations and corresponding data
         if annotation_sort == 'p-value':
             sort_order = selected_data[color_col].sort_values(ascending=sort_order_ascending).index
         elif annotation_sort == 'name_length':
@@ -189,19 +189,19 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                             alpha=opacities,
                             edgecolors='black')
 
-        # Set y-axis ticks and labels with proper alignment and font
+        # Set y-axis ticks and labels, adjust alignment and font
         ax.set_yticks(y_values)
         ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha=annotation_alignment)
 
-        # Adjust layout to make room for labels outside the plot area
-        plt.subplots_adjust(left=0.45, right=0.8)  # Increased left margin for pathway names
+        # Adjust layout to give enough space for the labels
+        plt.subplots_adjust(left=0.35 if annotation_alignment == 'right' else 0.15, right=0.8)
 
         # Set X and Y axis labels
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
         ax.set_ylabel(y_label, fontsize=legend_fontsize)
         ax.set_title(title, fontsize=legend_fontsize)
 
-        # Invert Y-axis to align with the expected order
+        # Invert Y-axis
         ax.invert_yaxis()
 
         # Add colorbar
@@ -222,7 +222,6 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None, {}
-
         
         
 def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
@@ -478,6 +477,8 @@ with tab2:
 
         # Annotation options
         st.write("### Annotation Options")
+        # Inside tab2 for Annotation and Allow More Rows:
+        st.write("### Annotation Options")
         col1, col2, col3 = st.columns(3)
         with col1:
             show_annotation_id = st.checkbox("Show Annotation IDs", value=False)
@@ -485,7 +486,7 @@ with tab2:
             annotation_sort = st.selectbox("Sort annotations by", ["p-value", "name_length", "none"])
         with col3:
             annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
-
+        
         col1, col2, col3 = st.columns(3)
         with col1:
             annotation_font = st.selectbox("Annotation font", ["Arial", "Times New Roman", "Courier"])
@@ -493,7 +494,9 @@ with tab2:
             annotation_size = st.slider("Annotation font size", 6, 20, 10)
         with col3:
             legend_fontsize = st.slider("Legend font size", 6, 20, 10)
-
+        
+        # Handle 'Allow More Rows' correctly:
+        allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
         # Submit button for form
         submit_button = st.form_submit_button("Generate Visualization")
 
