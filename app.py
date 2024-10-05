@@ -114,12 +114,11 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                          show_annotation_id, annotation_sort, annotation_font, annotation_size,
                          annotation_alignment, legend_fontsize, allow_more_rows):
     try:
-        # Handle annotations
-        if show_annotation_id:
-            annotations = selected_data.index.tolist()
-        else:
-            annotations = selected_data[y_col].apply(clean_pathway_name).tolist()
-        
+        # Ensure get_sorted_filtered_data is called and assigns selected_data and filtered_data
+        selected_data, filtered_data, discarded_data = get_sorted_filtered_data(
+            df, sort_by, ranges, selection_method, num_pathways, allow_more_rows
+        )
+
         if selected_data.empty:
             st.warning("No data to display after applying filters.")
             return None, filtered_data, selected_data, discarded_data
@@ -132,19 +131,22 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
         # Apply clean_pathway_name to y_col if show_annotation_id is False
+        def clean_pathway_name(name):
+            return re.sub(r'(R-HSA-\d+|DOID:\d+):\s*', '', str(name))
+
         if not show_annotation_id:
             selected_data[y_col] = selected_data[y_col].apply(clean_pathway_name)
 
         # Prepare annotations
         annotations = selected_data[y_col].tolist()
-        
+
         # Handle size values
         if size_col != "None":
             sizes = pd.to_numeric(selected_data[size_col], errors='coerce')
             sizes = normalize_data_vectorized(sizes, min_size, max_size, size_factor, size_increase)
         else:
             sizes = np.full(len(selected_data), (min_size + max_size) / 2)
-        
+
         # Handle opacity values
         if opacity_col != "None":
             opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
@@ -154,16 +156,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         x_values = selected_data[x_col].values
 
-        # Handle annotations
-        def clean_pathway_name(name):
-            # Remove RHSA and DOID IDs
-            return re.sub(r'(R-HSA-\d+|DOID:\d+):\s*', '', name)
-
-        if show_annotation_id:
-            annotations = selected_data.index.tolist()
-        else:
-            annotations = selected_data[y_col] = selected_data[y_col].apply(clean_pathway_name)
-
+        # Sort annotations if necessary
         if annotation_sort == 'p-value':
             sort_order = selected_data[color_col].argsort()[::-1]  # Reverse to get descending order
         elif annotation_sort == 'name_length':
@@ -171,26 +164,19 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             sort_order = np.arange(len(selected_data))
 
-        # Sort all relevant data
+        # Sort all relevant data by valid indices
         valid_indices = [i for i in sort_order if i < len(annotations) and i >= 0]
-
-
-        # Ensure all relevant arrays are correctly synchronized and of equal length
         annotations = [annotations[i] for i in valid_indices]
         x_values = x_values[valid_indices]
         y_values = np.arange(len(annotations))
-        selected_data = selected_data.iloc[:min_length]
-        # Ensure sizes and opacities are arrays and also apply valid_indices filtering
+
+        # Apply the sorted indices to sizes and opacities
         if isinstance(sizes, np.ndarray):
             sizes = sizes[valid_indices]
         if isinstance(opacities, np.ndarray):
             opacities = opacities[valid_indices]
-        # Update selected_data based on valid_indices
-        selected_data = selected_data.iloc[valid_indices]
 
-        # Adjust figure size to accommodate long pathway names
-        fig_width += 5  # Increase width to make room for pathway names
-        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+        selected_data = selected_data.iloc[valid_indices]
 
         # Plot the data
         scatter = ax.scatter(x_values, y_values,
@@ -205,7 +191,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font)
 
         # Adjust layout to make room for labels
-        plt.subplots_adjust(left=0.4, right=0.8) # Increase left margin for pathway names
+        plt.subplots_adjust(left=0.4, right=0.8)  # Increase left margin for pathway names
 
         # Set Y-axis label
         ax.set_ylabel(y_label, fontsize=legend_fontsize)
