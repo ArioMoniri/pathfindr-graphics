@@ -453,6 +453,7 @@ with tab2:
         submit_button = st.form_submit_button("Generate Visualization")
 
         # Generate the visualization if the form is submitted
+        # Inside the main execution block, after generating the visualization
         if submit_button:
             try:
                 result = plot_and_export_chart(
@@ -464,12 +465,12 @@ with tab2:
                     show_annotation_id, annotation_sort, annotation_font, annotation_size,
                     annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
                 )
-
+        
                 if isinstance(result, tuple) and len(result) == 4:
                     fig, filtered_data, selected_data, discarded_data = result
                     if fig is not None:
                         st.pyplot(fig)
-
+        
                         # Display discarded rows information
                         st.write("### Rows Discarded Due to Filtering")
                         if discarded_data:
@@ -478,17 +479,17 @@ with tab2:
                                 st.dataframe(discarded)
                         else:
                             st.write("No rows were discarded by filtering.")
+        
+                        # If 'allow_more_rows' is True, show how many rows were retrieved
+                        if allow_more_rows and len(selected_data) > len(filtered_data):
+                            st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
                     else:
                         st.warning("No visualization could be generated with the current settings.")
                 else:
                     st.error("Unexpected result from plot_and_export_chart function.")
             except Exception as e:
                 st.error(f"An error occurred while generating the visualization: {str(e)}")
-                st.error("Please check your inputs and try again.")        
-                        if allow_more_rows and len(selected_data) > len(filtered_data):
-                            st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
-                    else:
-                        st.warning("No visualization could be generated with the current settings.")
+                st.error("Please check your inputs and try again.")
                     
                         
                 # Show selected data in tab 2
