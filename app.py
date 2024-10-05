@@ -177,11 +177,11 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                             alpha=opacities,
                             edgecolors='black')
 
-        # Set y-axis ticks and labels, align labels outside of the plot area
+        # Set y-axis ticks and labels with proper alignment and font
         ax.set_yticks(y_values)
-        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha='right', va='center')
+        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha=annotation_alignment)
 
-        # Align the labels to the left of the plot by adjusting plot margins
+        # Align the labels outside of the plot by adjusting plot margins
         ax.tick_params(axis='y', which='major', pad=10)  # Increase padding between tick labels and axis
 
         # Adjust layout to make room for labels
@@ -204,7 +204,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax.set_ylim([min(y_values) - 1, max(y_values) + 1])
 
         # Add size and opacity legends
-        create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
+        create_legends(fig, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
         plt.tight_layout()
         return fig, filtered_data, selected_data, discarded_data
@@ -239,40 +239,47 @@ def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
 def create_legends(fig, sizes, opacities, size_col, opacity_col, legend_fontsize):
     legend_elements = []
     legend_labels = []
-    
+
     if size_col != "None":
         size_values = [np.min(sizes), np.median(sizes), np.max(sizes)]
         for size in size_values:
-            legend_elements.append(plt.scatter([], [], s=size, c='gray', alpha=0.5))
+            legend_elements.append(Line2D([0], [0], marker='o', color='w', 
+                                          markerfacecolor='gray', markersize=np.sqrt(size),
+                                          markeredgecolor='black', linestyle='None'))
             legend_labels.append(f'{size_col}: {int(size)}')
 
     if opacity_col != "None":
         opacity_values = [np.min(opacities), np.median(opacities), np.max(opacities)]
         for opacity in opacity_values:
-            legend_elements.append(plt.scatter([], [], s=50, c='gray', alpha=opacity))
+            legend_elements.append(Line2D([0], [0], marker='o', color='gray',
+                                          markerfacecolor='gray', markersize=10,
+                                          alpha=opacity, linestyle='None'))
             legend_labels.append(f'{opacity_col}: {opacity:.2f}')
 
+    # Add legends to the plot
     if legend_elements:
-        legend_ax = fig.add_axes([0.85, 0.05, 0.1, 0.1])
-        legend_ax.axis('off')
-        legend_ax.legend(legend_elements, legend_labels, loc='center', fontsize=legend_fontsize, title="Size and Opacity")
-        legend_ax.set_title("Size and Opacity", fontsize=legend_fontsize)
+        leg = fig.legend(legend_elements, legend_labels, loc='center left',
+                         bbox_to_anchor=(1.05, 0.5), frameon=True, title="Size and Opacity",
+                         fontsize=legend_fontsize)
+        plt.setp(leg.get_title(), multialignment='center', fontsize=legend_fontsize)
+
 
 def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways, allow_more_rows):
     filtered_data = df.copy()
     discarded_data = {}
-    
+
     for col, (min_val, max_val) in ranges.items():
         if pd.api.types.is_numeric_dtype(df[col]):
             discarded = filtered_data[(filtered_data[col] < min_val) | (filtered_data[col] > max_val)]
             filtered_data = filtered_data[(filtered_data[col] >= min_val) & (filtered_data[col] <= max_val)]
             discarded_data[col] = discarded
-    
+
     filtered_data = filtered_data.sort_values(by=sort_by, ascending=False)
-    
-    if allow_more_rows and len(filtered_data) < num_pathways:
-        num_pathways = len(filtered_data)
-    
+
+    if allow_more_rows:
+        num_pathways = max(num_pathways, len(filtered_data))  # Set num_pathways to the total length if allowed
+
+    # Selection based on method
     if selection_method == 'Top (Highest Values)':
         selected_data = filtered_data.head(num_pathways)
     elif selection_method == 'Bottom (Lowest Values)':
@@ -286,7 +293,7 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     else:  # Middle
         start_idx = (len(filtered_data) - num_pathways) // 2
         selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
-    
+
     return selected_data, filtered_data, discarded_data
         
 # Main execution
