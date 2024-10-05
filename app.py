@@ -188,6 +188,9 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
     # Create legends for size and opacity
     create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
+    # Adjust x-axis limits to add padding
+    ax.set_xlim([min(x_values) - 20, max(x_values) + 20])
+
     # Adjust layout
     plt.tight_layout()
 
