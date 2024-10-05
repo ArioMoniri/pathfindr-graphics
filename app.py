@@ -288,7 +288,7 @@ if __name__ == "__main__":
                         neg_log_col_name = f'-log10({col})'
                         df[neg_log_col_name] = -np.log10(df[col].clip(lower=1e-300))
 
-             with tab2:
+            with tab2:
                     # Move all the setting widgets here
                 with st.form("visualization_settings"):
                     columns = df.columns.tolist()
