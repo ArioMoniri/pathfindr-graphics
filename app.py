@@ -132,10 +132,10 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Apply clean_pathway_name to y_col if show_annotation_id is False
         def clean_pathway_name(name):
-            # Simple method to remove the content within parentheses, including parentheses
-            if '(' in name:
-                name = name.split('(')[0].strip()
-            return name
+            # Remove specific IDs within parentheses (R-HSA-*, DOID:*)
+            name = re.sub(r'\(R-HSA-\d+\)', '', name)  # Remove R-HSA IDs
+            name = re.sub(r'\(DOID:\d+\)', '', name)   # Remove DOID IDs
+            return name.strip()
 
         if not show_annotation_id:
             selected_data[y_col] = selected_data[y_col].apply(clean_pathway_name)
