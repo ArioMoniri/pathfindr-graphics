@@ -144,15 +144,15 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Sorting annotations and corresponding data
         if annotation_sort == 'p-value':
-            sort_order = selected_data[color_col].argsort(ascending=sort_order_ascending)
+            sort_order = selected_data[color_col].sort_values(ascending=sort_order_ascending).index
         elif annotation_sort == 'name_length':
-            sort_order = selected_data[y_col].str.len().argsort(ascending=sort_order_ascending)
+            sort_order = selected_data[y_col].str.len().sort_values(ascending=sort_order_ascending).index
         else:
-            sort_order = np.arange(len(selected_data))
+            sort_order = selected_data.index
 
         # Safely reorder annotations and other data
-        annotations = [annotations[i] for i in sort_order]
-        x_values = selected_data[x_col].values[sort_order]
+        annotations = selected_data.loc[sort_order, y_col].tolist()
+        x_values = selected_data.loc[sort_order, x_col].values
         y_values = np.arange(len(annotations))
 
         # Initialize sizes and opacities
@@ -161,25 +161,17 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Handle size values
         if size_col != "None":
-            sizes = pd.to_numeric(selected_data[size_col], errors='coerce')
+            sizes = pd.to_numeric(selected_data.loc[sort_order, size_col], errors='coerce')
             sizes = normalize_data_vectorized(sizes, min_size, max_size, size_factor, size_increase)
 
         # Handle opacity values
         if opacity_col != "None":
-            opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
+            opacities = pd.to_numeric(selected_data.loc[sort_order, opacity_col], errors='coerce')
             opacities = normalize_data_vectorized(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
-
-        # Re-order sizes and opacities based on sorting
-        if isinstance(sizes, np.ndarray):
-            sizes = sizes[sort_order]
-        if isinstance(opacities, np.ndarray):
-            opacities = opacities[sort_order]
-
-        selected_data = selected_data.iloc[sort_order]
 
         # Plot the data
         scatter = ax.scatter(x_values, y_values,
-                            c=selected_data[color_col],
+                            c=selected_data.loc[sort_order, color_col],
                             cmap=colormap,
                             s=sizes,
                             alpha=opacities,
@@ -221,6 +213,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None, {}
+        
         
 def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
     # Create legend for size and opacity by plotting invisible reference points
