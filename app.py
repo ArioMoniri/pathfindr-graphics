@@ -161,48 +161,35 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             return None, None, None, {}
 
         # Prepare data for plotting
-        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-        y_values = np.arange(len(selected_data))
-        x_values = selected_data[x_col].values
-        annotations = selected_data[y_col].tolist()
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
     
-        if not show_annotation_id:
-            annotations = [re.sub(r'\(R-HSA-\d+\)', '', name).strip() for name in annotations]
-            annotations = [re.sub(r'\(DOID:\d+\)', '', name).strip() for name in annotations]
-    
-        # Place the annotations outside the plot
-        ax.set_yticks(y_values)
-        plt.rcParams['font.family'] = annotation_font
-        ax.set_yticklabels(annotations, fontsize=annotation_size, ha=annotation_alignment)
-    
-        # Adjust margins to ensure annotations are not inside the plot area
-        plt.subplots_adjust(left=0.35 if annotation_alignment == 'right' else 0.15, right=0.85)
+    # Plot the scatter points
+    scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, 
+                         s=sizes, alpha=opacities, edgecolors='black')
 
-        # Handle size and opacity values
-        if size_col != "None":
-            sizes = pd.to_numeric(selected_data[size_col], errors='coerce')
-            sizes = normalize_data_vectorized(sizes, min_size, max_size, size_factor, size_increase)
-        else:
-            sizes = np.full(len(selected_data), (min_size + max_size) / 2)
+    # Set the y-ticks and labels
+    ax.set_yticks(y_values)
+    ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font)
 
-        if opacity_col != "None":
-            opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
-            opacities = normalize_data_vectorized(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
-        else:
-            opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
+    # Adjust the subplot to make room for the annotations
+    plt.subplots_adjust(left=0.4)  # Adjust this value as needed
 
-        # Plot scatter
-        scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, s=sizes, alpha=opacities, edgecolors='black')
+    # Set labels and title
+    ax.set_xlabel(x_label, fontsize=legend_fontsize)
+    ax.set_ylabel(y_label, fontsize=legend_fontsize)
+    ax.set_title(title, fontsize=legend_fontsize + 2)
 
-        # Set X and Y axis labels
-        ax.set_xlabel(x_label, fontsize=legend_fontsize, fontfamily=annotation_font)
-        ax.set_ylabel(y_label, fontsize=legend_fontsize, fontfamily=annotation_font)
-        ax.set_title(title, fontsize=legend_fontsize, fontfamily=annotation_font)
-        ax.invert_yaxis()
+    # Add colorbar
+    cbar = plt.colorbar(scatter)
+    cbar.set_label(legend_label, fontsize=legend_fontsize)
 
-        # Add colorbar
-        cbar = plt.colorbar(scatter, ax=ax)
-        cbar.set_label(legend_label, fontsize=legend_fontsize)
+    # Create legends for size and opacity
+    create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
+
+    # Adjust layout
+    plt.tight_layout()
+
+    return fig, filtered_data, selected_data, discarded_data
 
         # Adjust X-axis limits to add padding
         ax.set_xlim([min(x_values) - 20, max(x_values) + 20])
@@ -232,27 +219,32 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
         if pd.api.types.is_numeric_dtype(df[col]):
             discarded = filtered_data[(filtered_data[col] < min_val) | (filtered_data[col] > max_val)]
             filtered_data = filtered_data[(filtered_data[col] >= min_val) & (filtered_data[col] <= max_val)]
-            discarded_data[col] = discarded
+            if not discarded.empty:
+                discarded_data[col] = discarded
 
     filtered_data = filtered_data.sort_values(by=sort_by, ascending=False)
 
-    if allow_more_rows:
-        num_pathways = max(num_pathways, len(filtered_data))  # Set num_pathways to the total length if allowed
-
-    # Selection based on method
+    # Select data based on the selection method
     if selection_method == 'Top (Highest Values)':
         selected_data = filtered_data.head(num_pathways)
     elif selection_method == 'Bottom (Lowest Values)':
         selected_data = filtered_data.tail(num_pathways)
     elif selection_method == 'Both Ends':
         half_num = num_pathways // 2
-        selected_data = pd.concat([
-            filtered_data.head(half_num),
-            filtered_data.tail(half_num)
-        ])
+        selected_data = pd.concat([filtered_data.head(half_num), filtered_data.tail(half_num)])
     else:  # Middle
-        start_idx = (len(filtered_data) - num_pathways) // 2
-        selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
+        start_idx = max(0, (len(filtered_data) - num_pathways) // 2)
+        end_idx = min(len(filtered_data), start_idx + num_pathways)
+        selected_data = filtered_data.iloc[start_idx:end_idx]
+
+    # If 'allow_more_rows' is True and we have fewer rows than requested, add from discarded data
+    if allow_more_rows and len(selected_data) < num_pathways:
+        remaining_num = num_pathways - len(selected_data)
+        discarded_combined = pd.concat(discarded_data.values()).drop_duplicates()
+        discarded_combined = discarded_combined[~discarded_combined.index.isin(selected_data.index)]
+        discarded_combined = discarded_combined.sort_values(by=sort_by, ascending=False)
+        extra_data = discarded_combined.head(remaining_num)
+        selected_data = pd.concat([selected_data, extra_data]).sort_values(by=sort_by, ascending=False)
 
     return selected_data, filtered_data, discarded_data
         
@@ -470,7 +462,7 @@ with tab2:
                     fig, filtered_data, selected_data, discarded_data = result
                     if fig is not None:
                         st.pyplot(fig)
-        
+                    
                         # Display discarded rows information
                         st.write("### Rows Discarded Due to Filtering")
                         if discarded_data:
@@ -479,6 +471,12 @@ with tab2:
                                 st.dataframe(discarded)
                         else:
                             st.write("No rows were discarded by filtering.")
+                    
+                        # If 'allow_more_rows' is True, show how many rows were retrieved
+                        if allow_more_rows and len(selected_data) > len(filtered_data):
+                            st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
+                    else:
+                        st.warning("No visualization could be generated with the current settings.")
         
                         # If 'allow_more_rows' is True, show how many rows were retrieved
                         if allow_more_rows and len(selected_data) > len(filtered_data):
