@@ -199,8 +199,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         cbar = plt.colorbar(scatter, ax=ax)
         cbar.set_label(legend_label, fontsize=legend_fontsize)
 
-        # Adjust axis limits to ensure everything stays within bounds
-        ax.set_xlim([min(x_values) - 10, max(x_values) + 10])
+        # Adjust axis limits to ensure circles are not too close to the Y-axis
+        ax.set_xlim([min(x_values) - 20, max(x_values) + 20])  # Adding padding to the x-axis
         ax.set_ylim([min(y_values) - 1, max(y_values) + 1])
 
         # Add size and opacity legends
@@ -213,6 +213,24 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None, {}
+
+# Streamlit Code to Add Sorting Options for Ascending/Descending
+sort_options = st.radio("Sort Order", options=["Ascending", "Descending"])
+sort_order_ascending = True if sort_options == "Ascending" else False
+
+# Example Call to the Plot Function
+fig, filtered_data, selected_data, discarded_data = plot_and_export_chart(
+    df, x_col="Enrichment", y_col="Pathway", color_col="-log10(p-value)", size_col="None",
+    opacity_col="None", ranges={}, colormap='viridis', title="Top Pathways by Significance",
+    x_label="Fold Enrichment", y_label="Pathway", legend_label="-log10(p-value)", sort_by="p-value",
+    selection_method="Top (Highest Values)", num_pathways=10, fig_width=10, fig_height=8, min_size=50,
+    max_size=500, min_opacity=0.5, max_opacity=1.0, size_increase=True, opacity_increase=True, size_factor=1.0,
+    opacity_factor=1.0, show_annotation_id=False, annotation_sort="p-value", annotation_font="Arial", annotation_size=12,
+    annotation_alignment="right", legend_fontsize=12, allow_more_rows=False, sort_order_ascending=sort_order_ascending
+)
+
+if fig:
+    st.pyplot(fig)
         
         
 def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
