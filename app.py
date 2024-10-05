@@ -114,7 +114,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                          show_annotation_id, annotation_sort, annotation_font, annotation_size,
                          annotation_alignment, legend_fontsize, allow_more_rows):
     try:
-        # Ensure get_sorted_filtered_data is called and assigns selected_data and filtered_data
+        # Prepare the filtered and sorted data
         selected_data, filtered_data, discarded_data = get_sorted_filtered_data(
             df, sort_by, ranges, selection_method, num_pathways, allow_more_rows
         )
@@ -132,7 +132,6 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Apply clean_pathway_name to y_col if show_annotation_id is False
         def clean_pathway_name(name):
-            # Remove specific IDs within parentheses (R-HSA-*, DOID:*)
             name = re.sub(r'\(R-HSA-\d+\)', '', name)  # Remove R-HSA IDs
             name = re.sub(r'\(DOID:\d+\)', '', name)   # Remove DOID IDs
             return name.strip()
@@ -143,43 +142,25 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Prepare annotations
         annotations = selected_data[y_col].tolist()
 
-        # Handle size values
-        if size_col != "None":
-            sizes = pd.to_numeric(selected_data[size_col], errors='coerce')
-            sizes = normalize_data_vectorized(sizes, min_size, max_size, size_factor, size_increase)
-        else:
-            sizes = np.full(len(selected_data), (min_size + max_size) / 2)
-
-        # Handle opacity values
-        if opacity_col != "None":
-            opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
-            opacities = normalize_data_vectorized(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
-        else:
-            opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
-
-        x_values = selected_data[x_col].values
-
-        # Sort annotations if necessary
+        # Sorting annotations and the corresponding data based on the selected sorting option
         if annotation_sort == 'p-value':
-            sort_order = selected_data[color_col].argsort()[::-1]  # Reverse to get descending order
+            sort_order = selected_data[color_col].argsort()[::-1]
         elif annotation_sort == 'name_length':
             sort_order = selected_data[y_col].str.len().argsort().values
         else:
             sort_order = np.arange(len(selected_data))
 
-        # Sort all relevant data by valid indices
-        valid_indices = [i for i in sort_order if i < len(annotations) and i >= 0]
-        annotations = [annotations[i] for i in valid_indices]
-        x_values = x_values[valid_indices]
+        # Safely reorder annotations and other data
+        annotations = [annotations[i] for i in sort_order]
+        x_values = selected_data[x_col].values[sort_order]
         y_values = np.arange(len(annotations))
 
-        # Apply the sorted indices to sizes and opacities
         if isinstance(sizes, np.ndarray):
-            sizes = sizes[valid_indices]
+            sizes = sizes[sort_order]
         if isinstance(opacities, np.ndarray):
-            opacities = opacities[valid_indices]
+            opacities = opacities[sort_order]
 
-        selected_data = selected_data.iloc[valid_indices]
+        selected_data = selected_data.iloc[sort_order]
 
         # Plot the data
         scatter = ax.scatter(x_values, y_values,
@@ -191,34 +172,29 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Set y-axis ticks and labels
         ax.set_yticks(y_values)
-        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font)
+        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha=annotation_alignment)
 
         # Adjust layout to make room for labels
         plt.subplots_adjust(left=0.4, right=0.8)  # Increase left margin for pathway names
 
-        # Set Y-axis label
-        ax.set_ylabel(y_label, fontsize=legend_fontsize)
-
-        # Invert y-axis to match the image
-        ax.invert_yaxis()
-
+        # Set X and Y axis labels
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
+        ax.set_ylabel(y_label, fontsize=legend_fontsize)
         ax.set_title(title, fontsize=legend_fontsize)
 
+        # Invert Y-axis to align with the expected order
+        ax.invert_yaxis()
+
         # Add colorbar
-        cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
-        cbar = plt.colorbar(scatter, cax=cbar_ax)
+        cbar = plt.colorbar(scatter, ax=ax)
         cbar.set_label(legend_label, fontsize=legend_fontsize)
-        cbar.ax.tick_params(labelsize=legend_fontsize)
 
-        # Create size and opacity legends
+        # Adjust axis limits to ensure everything stays within bounds
+        ax.set_xlim([min(x_values) - 10, max(x_values) + 10])
+        ax.set_ylim([min(y_values) - 1, max(y_values) + 1])
+
+        # Add size and opacity legends
         create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
-
-        ax.tick_params(axis='both', which='major', labelsize=legend_fontsize)
-
-        # Adjust x-axis to start from a round number just below the minimum x value
-        x_min = np.floor(min(x_values) / 10) * 10
-        ax.set_xlim(left=x_min)
 
         plt.tight_layout()
         return fig, filtered_data, selected_data, discarded_data
@@ -227,6 +203,25 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None, {}
+
+def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
+    # Create legend for size and opacity by plotting invisible reference points
+    legend_elements = []
+    if size_col != "None":
+        for size in [np.min(sizes), np.median(sizes), np.max(sizes)]:
+            legend_elements.append(plt.Line2D([0], [0], marker='o', color='w', 
+                                              markerfacecolor='gray', markersize=np.sqrt(size), 
+                                              linestyle='None', label=f'{size_col}: {int(size)}'))
+    
+    if opacity_col != "None":
+        for opacity in [np.min(opacities), np.median(opacities), np.max(opacities)]:
+            legend_elements.append(plt.Line2D([0], [0], marker='o', color='gray',
+                                              markerfacecolor='gray', markersize=10, 
+                                              alpha=opacity, linestyle='None', label=f'{opacity_col}: {opacity:.2f}'))
+    
+    # Add the legends to the plot
+    if legend_elements:
+        ax.legend(handles=legend_elements, loc='best', fontsize=legend_fontsize, title="Size and Opacity")
         
 def create_legends(fig, sizes, opacities, size_col, opacity_col, legend_fontsize):
     legend_elements = []
