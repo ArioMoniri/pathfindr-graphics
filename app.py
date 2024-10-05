@@ -45,7 +45,6 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     filtered_data = df.copy()
     discarded_data = {}
 
-    # Apply filters to the data
     for col, (min_val, max_val) in ranges.items():
         if pd.api.types.is_numeric_dtype(df[col]):
             discarded = filtered_data[(filtered_data[col] < min_val) | (filtered_data[col] > max_val)]
@@ -55,29 +54,27 @@ def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways
     filtered_data = filtered_data.sort_values(by=sort_by, ascending=False)
 
     # Select data based on the selection method
-    if len(filtered_data) >= num_pathways:
-        if selection_method == 'Top (Highest Values)':
-            selected_data = filtered_data.head(num_pathways)
-        elif selection_method == 'Bottom (Lowest Values)':
-            selected_data = filtered_data.tail(num_pathways)
-        elif selection_method == 'Both Ends':
-            half_num = num_pathways // 2
-            selected_data = pd.concat([
-                filtered_data.head(half_num),
-                filtered_data.tail(half_num)
-            ])
-        else:  # Middle
-            start_idx = (len(filtered_data) - num_pathways) // 2
-            selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
-    else:
-        selected_data = filtered_data.copy()
+    if selection_method == 'Top (Highest Values)':
+        selected_data = filtered_data.head(num_pathways)
+    elif selection_method == 'Bottom (Lowest Values)':
+        selected_data = filtered_data.tail(num_pathways)
+    elif selection_method == 'Both Ends':
+        half_num = num_pathways // 2
+        selected_data = pd.concat([
+            filtered_data.head(half_num),
+            filtered_data.tail(half_num)
+        ])
+    else:  # Middle
+        start_idx = (len(filtered_data) - num_pathways) // 2
+        selected_data = filtered_data.iloc[start_idx:start_idx + num_pathways]
 
-    # If 'allow_more_rows' is True, attempt to compensate by adding rows from discarded data
+    # If 'allow_more_rows' is True and we have fewer rows than requested, add from discarded data
     if allow_more_rows and len(selected_data) < num_pathways:
         remaining_num = num_pathways - len(selected_data)
-        extra_data = pd.concat(discarded_data.values(), axis=0).sort_values(by=sort_by, ascending=False)
-        extra_data = extra_data.head(remaining_num)
-        selected_data = pd.concat([selected_data, extra_data])
+        discarded_combined = pd.concat(discarded_data.values()).drop_duplicates()
+        discarded_combined = discarded_combined.sort_values(by=sort_by, ascending=False)
+        extra_data = discarded_combined.head(remaining_num)
+        selected_data = pd.concat([selected_data, extra_data]).sort_values(by=sort_by, ascending=False)
 
     return selected_data, filtered_data, discarded_data
 
@@ -91,34 +88,38 @@ def display_plot(fig):
 
 
 # Updated create_legends function
-def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
+def create_legends(fig, ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
     legend_elements = []
     legend_labels = []
-    
+
     if size_col != "None":
         size_values = [np.min(sizes), np.median(sizes), np.max(sizes)]
         for size in size_values:
             legend_elements.append(Line2D([0], [0], marker='o', color='w', 
-                                         markerfacecolor='gray', markersize=np.sqrt(size),
-                                         markeredgecolor='black', linestyle='None'))
+                                          markerfacecolor='gray', markersize=np.sqrt(size),
+                                          markeredgecolor='black', linestyle='None'))
             legend_labels.append(f'{size_col}: {int(size)}')
 
     if opacity_col != "None":
         opacity_values = [np.min(opacities), np.median(opacities), np.max(opacities)]
         for opacity in opacity_values:
             legend_elements.append(Line2D([0], [0], marker='o', color='gray',
-                                         markerfacecolor='gray', markersize=10,
-                                         alpha=opacity, linestyle='None'))
+                                          markerfacecolor='gray', markersize=10,
+                                          alpha=opacity, linestyle='None'))
             legend_labels.append(f'{opacity_col}: {opacity:.2f}')
 
+    # Add legends to the plot
     if legend_elements:
-        leg = ax.legend(legend_elements, legend_labels, loc='center left', 
-                  bbox_to_anchor=(1.05, 0.5), frameon=True, title="Size and Opacity",
-                  fontsize=legend_fontsize)
+        leg = ax.legend(legend_elements, legend_labels, loc='center left',
+                        bbox_to_anchor=(1.05, 0.5), frameon=True, title="Size and Opacity",
+                        fontsize=legend_fontsize)
         plt.setp(leg.get_title(), multialignment='center', fontsize=legend_fontsize)
 
-# Updated plot_and_export_chart function
+    # Adjust the layout to make room for the legend
+    plt.tight_layout()
+    plt.subplots_adjust(right=0.75)
 
+# Updated plot_and_export_chart function
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, 
                          colormap, title, x_label, y_label, legend_label, sort_by, 
                          selection_method, num_pathways, fig_width, fig_height, 
@@ -160,16 +161,16 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         y_values = np.arange(len(selected_data))
         x_values = selected_data[x_col].values
         annotations = selected_data[y_col].tolist()
-
-        # Handle annotations (removing IDs if necessary)
+    
         if not show_annotation_id:
             annotations = [re.sub(r'\(R-HSA-\d+\)', '', name).strip() for name in annotations]
             annotations = [re.sub(r'\(DOID:\d+\)', '', name).strip() for name in annotations]
-
+    
         # Place the annotations outside the plot
         ax.set_yticks(y_values)
-        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font, ha=annotation_alignment)
-
+        plt.rcParams['font.family'] = annotation_font
+        ax.set_yticklabels(annotations, fontsize=annotation_size, ha=annotation_alignment)
+    
         # Adjust margins to ensure annotations are not inside the plot area
         plt.subplots_adjust(left=0.35 if annotation_alignment == 'right' else 0.15, right=0.85)
 
@@ -190,9 +191,9 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, s=sizes, alpha=opacities, edgecolors='black')
 
         # Set X and Y axis labels
-        ax.set_xlabel(x_label, fontsize=legend_fontsize)
-        ax.set_ylabel(y_label, fontsize=legend_fontsize)
-        ax.set_title(title, fontsize=legend_fontsize)
+        ax.set_xlabel(x_label, fontsize=legend_fontsize, fontfamily=annotation_font)
+        ax.set_ylabel(y_label, fontsize=legend_fontsize, fontfamily=annotation_font)
+        ax.set_title(title, fontsize=legend_fontsize, fontfamily=annotation_font)
         ax.invert_yaxis()
 
         # Add colorbar
@@ -216,51 +217,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         
         
-def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize):
-    # Create legend for size and opacity by plotting invisible reference points
-    legend_elements = []
-    if size_col != "None":
-        for size in [np.min(sizes), np.median(sizes), np.max(sizes)]:
-            legend_elements.append(plt.Line2D([0], [0], marker='o', color='w', 
-                                              markerfacecolor='gray', markersize=np.sqrt(size), 
-                                              linestyle='None', label=f'{size_col}: {int(size)}'))
-    
-    if opacity_col != "None":
-        for opacity in [np.min(opacities), np.median(opacities), np.max(opacities)]:
-            legend_elements.append(plt.Line2D([0], [0], marker='o', color='gray',
-                                              markerfacecolor='gray', markersize=10, 
-                                              alpha=opacity, linestyle='None', label=f'{opacity_col}: {opacity:.2f}'))
-    
-    # Add the legends to the plot
-    if legend_elements:
-        ax.legend(handles=legend_elements, loc='best', fontsize=legend_fontsize, title="Size and Opacity")
-        
-def create_legends(fig, sizes, opacities, size_col, opacity_col, legend_fontsize):
-    legend_elements = []
-    legend_labels = []
 
-    if size_col != "None":
-        size_values = [np.min(sizes), np.median(sizes), np.max(sizes)]
-        for size in size_values:
-            legend_elements.append(Line2D([0], [0], marker='o', color='w', 
-                                          markerfacecolor='gray', markersize=np.sqrt(size),
-                                          markeredgecolor='black', linestyle='None'))
-            legend_labels.append(f'{size_col}: {int(size)}')
-
-    if opacity_col != "None":
-        opacity_values = [np.min(opacities), np.median(opacities), np.max(opacities)]
-        for opacity in opacity_values:
-            legend_elements.append(Line2D([0], [0], marker='o', color='gray',
-                                          markerfacecolor='gray', markersize=10,
-                                          alpha=opacity, linestyle='None'))
-            legend_labels.append(f'{opacity_col}: {opacity:.2f}')
-
-    # Add legends to the plot
-    if legend_elements:
-        leg = fig.legend(legend_elements, legend_labels, loc='center left',
-                         bbox_to_anchor=(1.05, 0.5), frameon=True, title="Size and Opacity",
-                         fontsize=legend_fontsize)
-        plt.setp(leg.get_title(), multialignment='center', fontsize=legend_fontsize)
 
 
 def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways, allow_more_rows):
@@ -524,7 +481,11 @@ with tab2:
             except Exception as e:
                 st.error(f"An error occurred while generating the visualization: {str(e)}")
                 st.error("Please check your inputs and try again.")        
-        
+                        if allow_more_rows and len(selected_data) > len(filtered_data):
+                            st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
+                    else:
+                        st.warning("No visualization could be generated with the current settings.")
+                    
                         
                 # Show selected data in tab 2
                 if selected_data is not None:
