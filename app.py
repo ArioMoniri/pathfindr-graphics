@@ -131,85 +131,77 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                           size_increase, opacity_increase, size_factor, opacity_factor,
                           show_annotation_id, annotation_sort, annotation_font, annotation_size,
                           annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending=True):
-    # Get the sorted and filtered data
-    selected_data, filtered_data, discarded_data = get_sorted_filtered_data(
-        df, sort_by, ranges, selection_method, num_pathways, allow_more_rows
-    )
-    
-    if selected_data.empty:
-        return None, filtered_data, selected_data, discarded_data
+    try:
+        # Get the sorted and filtered data
+        selected_data, filtered_data, discarded_data = get_sorted_filtered_data(
+            df, sort_by, ranges, selection_method, num_pathways, allow_more_rows
+        )
+        
+        if selected_data.empty:
+            return None, filtered_data, selected_data, discarded_data
 
-    # Define x_values and y_values
-    x_values = selected_data[x_col].values
-    y_values = np.arange(len(selected_data))
-    
-    # Prepare annotations
-    annotations = selected_data[y_col].tolist()
-    if not show_annotation_id:
-        annotations = [re.sub(r'\(R-HSA-\d+\)', '', name).strip() for name in annotations]
-        annotations = [re.sub(r'\(DOID:\d+\)', '', name).strip() for name in annotations]
+        # Define x_values and y_values
+        x_values = selected_data[x_col].values
+        y_values = np.arange(len(selected_data))
+        
+        # Prepare annotations
+        annotations = selected_data[y_col].tolist()
+        if not show_annotation_id:
+            annotations = [re.sub(r'\(R-HSA-\d+\)', '', name).strip() for name in annotations]
+            annotations = [re.sub(r'\(DOID:\d+\)', '', name).strip() for name in annotations]
 
-    # Handle size and opacity
-    if size_col != "None":
-        sizes = pd.to_numeric(selected_data[size_col], errors='coerce')
-        sizes = normalize_data_vectorized(sizes, min_size, max_size, size_factor, size_increase)
-    else:
-        sizes = np.full(len(selected_data), (min_size + max_size) / 2)
+        # Handle size and opacity
+        if size_col != "None":
+            sizes = pd.to_numeric(selected_data[size_col], errors='coerce')
+            sizes = normalize_data_vectorized(sizes, min_size, max_size, size_factor, size_increase)
+        else:
+            sizes = np.full(len(selected_data), (min_size + max_size) / 2)
 
-    if opacity_col != "None":
-        opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
-        opacities = normalize_data_vectorized(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
-    else:
-        opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
+        if opacity_col != "None":
+            opacities = pd.to_numeric(selected_data[opacity_col], errors='coerce')
+            opacities = normalize_data_vectorized(opacities, min_opacity, max_opacity, opacity_factor, opacity_increase)
+        else:
+            opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
 
-    # Create the figure and axes
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-    
-    # Plot the scatter points
-    scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, 
-                         s=sizes, alpha=opacities, edgecolors='black')
+        # Create the figure and axes
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+        
+        # Plot the scatter points
+        scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, 
+                             s=sizes, alpha=opacities, edgecolors='black')
 
-    # Set the y-ticks and labels
-    ax.set_yticks(y_values)
-    ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font)
+        # Set the y-ticks and labels
+        ax.set_yticks(y_values)
+        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font)
 
-    # Adjust the subplot to make room for the annotations
-    plt.subplots_adjust(left=0.4)  # Adjust this value as needed
+        # Adjust the subplot to make room for the annotations
+        plt.subplots_adjust(left=0.4)  # Adjust this value as needed
 
-    # Set labels and title
-    ax.set_xlabel(x_label, fontsize=legend_fontsize)
-    ax.set_ylabel(y_label, fontsize=legend_fontsize)
-    ax.set_title(title, fontsize=legend_fontsize + 2)
+        # Set labels and title
+        ax.set_xlabel(x_label, fontsize=legend_fontsize)
+        ax.set_ylabel(y_label, fontsize=legend_fontsize)
+        ax.set_title(title, fontsize=legend_fontsize + 2)
 
-    # Add colorbar
-    cbar = plt.colorbar(scatter)
-    cbar.set_label(legend_label, fontsize=legend_fontsize)
+        # Add colorbar
+        cbar = plt.colorbar(scatter)
+        cbar.set_label(legend_label, fontsize=legend_fontsize)
 
-    # Create legends for size and opacity
-    create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
+        # Create legends for size and opacity
+        create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
-    # Adjust x-axis limits to add padding
-    ax.set_xlim([min(x_values) - 20, max(x_values) + 20])
+        # Adjust x-axis limits to add padding
+        ax.set_xlim([min(x_values) - 20, max(x_values) + 20])
 
-    # Adjust layout
-    plt.tight_layout()
+        # Adjust layout
+        plt.tight_layout()
 
-    return fig, filtered_data, selected_data, discarded_data
+        return fig, filtered_data, selected_data, discarded_data
 
-    # Adjust X-axis limits to add padding
-    ax.set_xlim([min(x_values) - 20, max(x_values) + 20])
-
-    # Add legends for size and opacity
-    create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
-
-    plt.tight_layout()
-    return fig, filtered_data, selected_data, {}
-
-except Exception as e:
-    st.error(f"Error in plot_and_export_chart: {str(e)}")
-    import traceback
-    st.error(f"Traceback: {traceback.format_exc()}")
-    return None, None, None, {}
+    except Exception as e:
+        st.error(f"Error in plot_and_export_chart: {str(e)}")
+        import traceback
+        st.error(f"Traceback: {traceback.format_exc()}")
+        return None, None, None, {}
 
         
         
