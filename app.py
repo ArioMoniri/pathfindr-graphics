@@ -462,7 +462,7 @@ with tab2:
                     fig, filtered_data, selected_data, discarded_data = result
                     if fig is not None:
                         st.pyplot(fig)
-                    
+        
                         # Display discarded rows information
                         st.write("### Rows Discarded Due to Filtering")
                         if discarded_data:
@@ -471,12 +471,6 @@ with tab2:
                                 st.dataframe(discarded)
                         else:
                             st.write("No rows were discarded by filtering.")
-                    
-                        # If 'allow_more_rows' is True, show how many rows were retrieved
-                        if allow_more_rows and len(selected_data) > len(filtered_data):
-                            st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
-                    else:
-                        st.warning("No visualization could be generated with the current settings.")
         
                         # If 'allow_more_rows' is True, show how many rows were retrieved
                         if allow_more_rows and len(selected_data) > len(filtered_data):
@@ -487,8 +481,7 @@ with tab2:
                     st.error("Unexpected result from plot_and_export_chart function.")
             except Exception as e:
                 st.error(f"An error occurred while generating the visualization: {str(e)}")
-                st.error("Please check your inputs and try again.")
-                    
+                st.error("Please check your inputs and try again.")                    
                         
                 # Show selected data in tab 2
                 if selected_data is not None:
