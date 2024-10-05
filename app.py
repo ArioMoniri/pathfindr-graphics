@@ -196,20 +196,20 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
     return fig, filtered_data, selected_data, discarded_data
 
-        # Adjust X-axis limits to add padding
-        ax.set_xlim([min(x_values) - 20, max(x_values) + 20])
+    # Adjust X-axis limits to add padding
+    ax.set_xlim([min(x_values) - 20, max(x_values) + 20])
 
-        # Add legends for size and opacity
-        create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
+    # Add legends for size and opacity
+    create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
-        plt.tight_layout()
-        return fig, filtered_data, selected_data, {}
-    
-    except Exception as e:
-        st.error(f"Error in plot_and_export_chart: {str(e)}")
-        import traceback
-        st.error(f"Traceback: {traceback.format_exc()}")
-        return None, None, None, {}
+    plt.tight_layout()
+    return fig, filtered_data, selected_data, {}
+
+except Exception as e:
+    st.error(f"Error in plot_and_export_chart: {str(e)}")
+    import traceback
+    st.error(f"Traceback: {traceback.format_exc()}")
+    return None, None, None, {}
 
         
         
