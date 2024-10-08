@@ -205,16 +205,15 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
 
         # Create the figure and axes
-        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-        
-        # Adjust the plot area to make room for annotations
-        plt.subplots_adjust(left=0.7, right=0.95, top=0.95, bottom=0.1)  # Increase left margin for longer annotation names
-
+        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), gridspec_kw={'width_ratios': [0.3, 0.7]})
 
 
         # Plot the scatter points
-        scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, 
-                             s=sizes, alpha=opacities, edgecolors='black')
+        scatter = ax2.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, 
+                              s=sizes, alpha=opacities, edgecolors='black')
+        ax2.set_yticks(y_values)
+        ax2.set_yticklabels([])  # Avoid y-tick labels since they are in the other plot
+
 
         # Font handling
         if annotation_font != "Default":
@@ -228,32 +227,28 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             font_prop = fm.FontProperties(size=annotation_size)
 
-        # Remove existing y-axis ticks and labels
-        ax.set_yticks(y_values)
-        ax.set_yticklabels([])
-
-        # Calculate the position for annotations
-        bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-        width, height = bbox.width, bbox.height
-        annotation_space = width * 0.3 
-
-        # Add annotations with alignment
+        # Add annotations in ax1
         for i, annotation in enumerate(annotations):
             if annotation_alignment == 'left':
-                ax.text(-0.8, i, annotation, va='center', ha='left', fontproperties=font_prop)  # Shift more left
+                ax1.text(0.1, i, annotation, va='center', ha='left', fontproperties=font_prop)  # Align more to left
             elif annotation_alignment == 'right':
-                ax.text(-0.1, i, annotation, va='center', ha='right', fontproperties=font_prop)
+                ax1.text(0.9, i, annotation, va='center', ha='right', fontproperties=font_prop)
             else:  # center
-                ax.text(-0.5, i, annotation, va='center', ha='center', fontproperties=font_prop)
+                ax1.text(0.5, i, annotation, va='center', ha='center', fontproperties=font_prop)
 
+        ax1.set_yticks(y_values)
+        ax1.set_yticklabels([])
+        ax1.set_xlim([0, 1])
+        ax1.axis('off')  # Hide axis for annotations
 
-        # Adjust the subplot to make room for the annotations
-        plt.subplots_adjust(left=0.6) 
+        # Adjust the subplot to make room for the annotations and reduce space between plots
+        plt.subplots_adjust(wspace=0.05)  # Adjust space between the subplots
 
-        # Set labels and title
-        ax.set_xlabel(x_label, fontsize=legend_fontsize)
-        ax.set_ylabel(y_label, fontsize=legend_fontsize)
-        ax.set_title(title, fontsize=legend_fontsize + 2)
+        # Set labels and title in ax2 (scatter plot)
+        ax2.set_xlabel(x_label, fontsize=legend_fontsize)
+        ax2.set_ylabel(y_label, fontsize=legend_fontsize)
+        ax2.set_title(title, fontsize=legend_fontsize + 2)
+
 
         # Add colorbar
         cbar = plt.colorbar(scatter)
