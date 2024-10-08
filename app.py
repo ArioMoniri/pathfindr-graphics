@@ -17,7 +17,7 @@ import streamlit.components.v1 as components
 # Function to load data from an uploaded Excel file
 @st.cache_data
 
-
+available_fonts = sorted(set([f.name for f in fm.fontManager.ttflist]))
 def font_selector(label, font_list):
     font_options_html = "".join([
         f'<option value="{font}" style="font-family: {font}">{font}</option>'
@@ -478,6 +478,7 @@ if __name__ == "__main__":
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         if available_fonts:
+                            
                             annotation_font = st.selectbox("Annotation font", available_fonts)
                         else:
                             annotation_font = "Default"
