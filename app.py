@@ -254,7 +254,6 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Set labels and title
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
         ax.set_ylabel(y_label, fontsize=legend_fontsize)
-        ax.yaxis.set_label_coords(-left_margin + 0.02, 0.5)
         ax.set_title(title, fontsize=legend_fontsize + 2)
 
         # Add colorbar
