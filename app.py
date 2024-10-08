@@ -239,17 +239,14 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Add annotations with alignment
         for i, annotation in enumerate(annotations):
             if annotation_alignment == 'left':
-                ax.text(-annotation_space, i, annotation, va='center', ha='left', fontproperties=font_prop)
+                ax.text(-0.5, i, annotation, annotation, va='center', ha='left', fontproperties=font_prop)
             elif annotation_alignment == 'right':
-                ax.text(-annotation_space * 0.05, i, annotation, va='center', ha='right', fontproperties=font_prop)
+                ax.text(-0.5, i, annotation, annotation, va='center', ha='right', fontproperties=font_prop)
             else:  # center
-                ax.text(-annotation_space * 0.5, i, annotation, va='center', ha='center', fontproperties=font_prop)
+                ax.text(-0.5, i, annotation, annotation, va='center', ha='center', fontproperties=font_prop)
 
         # Adjust the subplot to make room for the annotations
-        plt.subplots_adjust(left=0.3) 
-
-        # Adjust left margin based on the widest annotation
-        plt.subplots_adjust(left=0.3)
+        plt.subplots_adjust(left=0.6) 
 
         # Set labels and title
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
@@ -265,7 +262,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Adjust x-axis limits to ensure circles are fully visible
         x_max = max(x_values) * 1.1
-        ax.set_xlim(0, x_max)
+        ax.set_xlim(-0.5, x_max)
 
         # Set y-axis limits
         ax.set_ylim(-1, len(annotations))
