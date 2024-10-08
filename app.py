@@ -155,7 +155,7 @@ def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
     # Adjust the layout to make room for the legend
     plt.tight_layout()
-    plt.subplots_adjust(right=0.75)
+    plt.subplots_adjust(right=0.2)
 
 # Updated plot_and_export_chart function
 def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, 
@@ -211,6 +211,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Plot the scatter points
         scatter = ax2.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, 
                               s=sizes, alpha=opacities, edgecolors='black')
+        ax2.spines['left'].set_position(('outward', 10)) 
         ax2.set_yticks(y_values)
         ax2.set_yticklabels([])  # Avoid y-tick labels since they are in the other plot
 
@@ -237,7 +238,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                 ax1.text(0.5, i, annotation, va='center', ha='center', fontproperties=font_prop)
 
         ax1.set_yticks(y_values)
-        ax1.set_yticklabels(annotations)
+        ax1.set_yticklabels(annotations, fontsize=annotation_size) 
         ax1.set_xlim([0, 1])
         ax1.axis('off')  # Hide axis for annotations
 
@@ -258,8 +259,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         create_legends(ax2, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
         # Adjust x-axis limits to ensure circles are fully visible
-        x_max = max(x_values) * 1.1
-        ax2.set_xlim(0, x_max)
+        ax2.set_xlim(min(x_values) - 0.5, max(x_values) * 1.1)  # Add padding to the left of the plot
+
 
         # Set y-axis limits
         ax2.set_ylim(-1, len(annotations))
