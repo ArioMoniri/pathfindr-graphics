@@ -210,8 +210,6 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Adjust the plot area to make room for annotations
         plt.subplots_adjust(left=0.4, right=0.95, top=0.95, bottom=0.1)
 
-        # Calculate the maximum circle size to adjust x-axis limits
-        max_circle_size = np.sqrt(max(sizes)) / 72  # Convert from points to inches
 
         # Plot the scatter points
         scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, 
