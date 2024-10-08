@@ -232,16 +232,16 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax.set_yticklabels([])
 
         # Add annotations with alignment
-        max_annotation_width = 0
         for i, annotation in enumerate(annotations):
             if annotation_alignment == 'left':
-                t = ax.text(-0.01, i, annotation, va='center', ha='right', fontproperties=font_prop, transform=ax.transAxes)
+                ax.text(-annotation_space, i, annotation, va='center', ha='left', fontproperties=font_prop)
             elif annotation_alignment == 'right':
-                t = ax.text(-0.35, i, annotation, va='center', ha='right', fontproperties=font_prop, transform=ax.transAxes)
+                ax.text(-annotation_space * 0.05, i, annotation, va='center', ha='right', fontproperties=font_prop)
             else:  # center
-                t = ax.text(-0.18, i, annotation, va='center', ha='center', fontproperties=font_prop, transform=ax.transAxes)
-            bb = t.get_window_extent(renderer=fig.canvas.get_renderer())
-            max_annotation_width = max(max_annotation_width, bb.width)
+                ax.text(-annotation_space * 0.5, i, annotation, va='center', ha='center', fontproperties=font_prop)
+
+        # Adjust the subplot to make room for the annotations
+        plt.subplots_adjust(left=0.3) 
 
         # Adjust left margin based on the widest annotation
         left_margin = max_annotation_width / fig.dpi / fig.get_figwidth() + 0.05
