@@ -232,7 +232,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Calculate the position for annotations
         bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
         width, height = bbox.width, bbox.height
-        annotation_space = width * 0.3  # Adjust this value to change the space for annotations
+        annotation_space = width * 0.5  # Adjust this value to change the space for annotations
 
         # Add annotations with alignment
         for i, annotation in enumerate(annotations):
