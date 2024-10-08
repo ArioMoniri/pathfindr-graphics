@@ -208,7 +208,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
         
         # Adjust the plot area to make room for annotations
-        plt.subplots_adjust(left=0.4, right=0.95, top=0.95, bottom=0.1)
+        plt.subplots_adjust(left=0.6, right=0.95, top=0.95, bottom=0.1)
 
 
         # Plot the scatter points
@@ -239,11 +239,11 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Add annotations with alignment
         for i, annotation in enumerate(annotations):
             if annotation_alignment == 'left':
-                ax.text(-0.5, i, annotation, annotation, va='center', ha='left', fontproperties=font_prop)
+                ax.text(-0.6, i, annotation, va='center', ha='left', fontproperties=font_prop)  # Increase the offset for more space
             elif annotation_alignment == 'right':
-                ax.text(-0.5, i, annotation, annotation, va='center', ha='right', fontproperties=font_prop)
+                ax.text(-0.05, i, annotation, va='center', ha='right', fontproperties=font_prop)
             else:  # center
-                ax.text(-0.5, i, annotation, annotation, va='center', ha='center', fontproperties=font_prop)
+                ax.text(-0.3, i, annotation, va='center', ha='center', fontproperties=font_prop)
 
         # Adjust the subplot to make room for the annotations
         plt.subplots_adjust(left=0.6) 
