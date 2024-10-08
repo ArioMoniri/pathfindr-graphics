@@ -237,12 +237,12 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                 ax1.text(0.5, i, annotation, va='center', ha='center', fontproperties=font_prop)
 
         ax1.set_yticks(y_values)
-        ax1.set_yticklabels([])
+        ax1.set_yticklabels(annotations)
         ax1.set_xlim([0, 1])
         ax1.axis('off')  # Hide axis for annotations
 
         # Adjust the subplot to make room for the annotations and reduce space between plots
-        plt.subplots_adjust(wspace=0.05)  # Adjust space between the subplots
+        plt.subplots_adjust(wspace=0.045)  # Adjust space between the subplots
 
         # Set labels and title in ax2 (scatter plot)
         ax2.set_xlabel(x_label, fontsize=legend_fontsize)
@@ -259,7 +259,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Adjust x-axis limits to ensure circles are fully visible
         x_max = max(x_values) * 1.1
-        ax2.set_xlim(-0.5, x_max)
+        ax2.set_xlim(0, x_max)
 
         # Set y-axis limits
         ax2.set_ylim(-1, len(annotations))
