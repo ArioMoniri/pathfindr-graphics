@@ -239,12 +239,12 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             if annotation_alignment == 'left':
                 ax.text(-annotation_space, i, annotation, va='center', ha='left', fontproperties=font_prop)
             elif annotation_alignment == 'right':
-                ax.text(-annotation_space * 0.05, i, annotation, va='center', ha='right', fontproperties=font_prop)
+                ax.text(-annotation_space * 0.25, i, annotation, va='center', ha='right', fontproperties=font_prop)
             else:  # center
-                ax.text(-annotation_space * 0.5, i, annotation, va='center', ha='center', fontproperties=font_prop)
+                ax.text(-annotation_space * 0.75, i, annotation, va='center', ha='center', fontproperties=font_prop)
 
         # Adjust the subplot to make room for the annotations
-        plt.subplots_adjust(left=0.3)  # Adjust this value to change the left margin
+        plt.subplots_adjust(left=0.4)  # Adjust this value to change the left margin
 
         # Set labels and title
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
