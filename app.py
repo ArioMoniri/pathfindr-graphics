@@ -246,13 +246,13 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             max_annotation_width = max(max_annotation_width, bb.width)
 
         # Adjust left margin based on the widest annotation
-        left_margin = max_annotation_width / fig.dpi / fig.get_figwidth() + 0.1
+        left_margin = max_annotation_width / fig.dpi / fig.get_figwidth() + 0.05
         plt.subplots_adjust(left=left_margin)
 
         # Set labels and title
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
         ax.set_ylabel(y_label, fontsize=legend_fontsize)
-        ax.yaxis.set_label_coords(-left_margin + 0.05, 0.5)
+        ax.yaxis.set_label_coords(-left_margin + 0.02, 0.5)
         ax.set_title(title, fontsize=legend_fontsize + 2)
 
         # Add colorbar
@@ -263,7 +263,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
         # Adjust x-axis limits to ensure circles are fully visible
-        x_max = max(x_values) + max_circle_size * fig.dpi * fig.get_figwidth() / 10
+        x_max = max(x_values) * 1.1
         ax.set_xlim(0, x_max)
 
         # Set y-axis limits
