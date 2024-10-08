@@ -173,8 +173,13 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Set the y-ticks and labels
         ax.set_yticks(y_values)
-        font_prop = fm.FontProperties(family=annotation_font, size=annotation_size)
-        ax.set_yticklabels(annotations, fontproperties=font_prop)
+        try:
+            font_prop = fm.FontProperties(family=annotation_font, size=annotation_size)
+            ax.set_yticklabels(annotations, fontproperties=font_prop)
+        except:
+            # If the specified font is not available, fall back to the default font
+            st.warning(f"The specified font '{annotation_font}' is not available. Using the default font instead.")
+            ax.set_yticklabels(annotations, fontsize=annotation_size)
 
         # Adjust the subplot to make room for the annotations
         plt.subplots_adjust(left=0.4)  # Adjust this value as needed
