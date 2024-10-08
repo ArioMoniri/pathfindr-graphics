@@ -207,17 +207,19 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Set the y-ticks and labels
         ax.set_yticks(y_values)
-        # Font handling
         font_found = False
         font_prop = None
         
+        # Get available font names
+        available_fonts = [f.name for f in fm.fontManager.ttflist]
+        
         # First, try exact match
-        if annotation_font in plt.font_manager.get_font_names():
+        if annotation_font in available_fonts:
             font_prop = fm.FontProperties(family=annotation_font, size=annotation_size)
             font_found = True
         else:
             # If exact match fails, try case-insensitive partial match
-            for font in plt.font_manager.get_font_names():
+            for font in available_fonts:
                 if annotation_font.lower() in font.lower():
                     font_prop = fm.FontProperties(family=font, size=annotation_size)
                     font_found = True
