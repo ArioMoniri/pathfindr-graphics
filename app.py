@@ -225,20 +225,26 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             font_prop = fm.FontProperties(size=annotation_size)
         
-        ax.set_yticks([])
+        # Remove existing y-axis ticks and labels
+        ax.set_yticks(y_values)
         ax.set_yticklabels([])
 
+        # Calculate the position for annotations
+        bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+        width, height = bbox.width, bbox.height
+        annotation_space = width * 0.3  # Adjust this value to change the space for annotations
+
         # Add annotations with alignment
-        for i, (annotation, x) in enumerate(zip(annotations, x_values)):
+        for i, annotation in enumerate(annotations):
             if annotation_alignment == 'left':
-                ax.text(ax.get_xlim()[0], i, f" {annotation}", va='center', ha='left', fontproperties=font_prop)
+                ax.text(-annotation_space, i, annotation, va='center', ha='left', fontproperties=font_prop)
             elif annotation_alignment == 'right':
-                ax.text(ax.get_xlim()[1], i, f"{annotation} ", va='center', ha='right', fontproperties=font_prop)
+                ax.text(-annotation_space * 0.05, i, annotation, va='center', ha='right', fontproperties=font_prop)
             else:  # center
-                ax.text(np.mean(ax.get_xlim()), i, annotation, va='center', ha='center', fontproperties=font_prop)
+                ax.text(-annotation_space * 0.5, i, annotation, va='center', ha='center', fontproperties=font_prop)
 
         # Adjust the subplot to make room for the annotations
-        plt.subplots_adjust(left=0.4)  # Adjust this value as needed
+        plt.subplots_adjust(left=0.3)  # Adjust this value to change the left margin
 
         # Set labels and title
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
@@ -252,8 +258,11 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Create legends for size and opacity
         create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
-        # Adjust x-axis limits to add padding
-        ax.set_xlim([min(x_values) - 20, max(x_values) + 20])
+        # Adjust x-axis limits to add padding and accommodate annotations
+        ax.set_xlim([0, max(x_values) * 1.1])
+
+        # Set y-axis limits
+        ax.set_ylim(-1, len(annotations))
 
         # Adjust layout
         plt.tight_layout()
