@@ -255,14 +255,14 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         cbar.set_label(legend_label, fontsize=legend_fontsize)
 
         # Create legends for size and opacity
-        create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
+        create_legends(ax2, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
         # Adjust x-axis limits to ensure circles are fully visible
         x_max = max(x_values) * 1.1
-        ax.set_xlim(-0.5, x_max)
+        ax2.set_xlim(-0.5, x_max)
 
         # Set y-axis limits
-        ax.set_ylim(-1, len(annotations))
+        ax2.set_ylim(-1, len(annotations))
 
         # Adjust layout
         plt.tight_layout()
