@@ -211,7 +211,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         font_prop = None
         
         # Get available font names
-        available_fonts = [f.name for f in fm.fontManager.ttflist]
+        available_fonts = sorted(set([f.name for f in fm.fontManager.ttflist]))
         
         # First, try exact match
         if annotation_font in available_fonts:
@@ -488,7 +488,11 @@ if __name__ == "__main__":
                     
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        annotation_font = font_selector("Annotation font", fonts)
+                        if available_fonts:
+                            annotation_font = st.selectbox("Annotation font", available_fonts)
+                        else:
+                            annotation_font = "Default"
+                            st.warning("No fonts detected. Using default font.")
                     with col2:
                         annotation_size = st.slider("Annotation font size", 6, 20, 10)
                     with col3:
