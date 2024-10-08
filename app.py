@@ -9,6 +9,7 @@ from pygwalker.api.streamlit import init_streamlit_comm, StreamlitRenderer
 from functools import lru_cache
 import time
 import re
+import matplotlib.font_manager as fm
 
 
 
@@ -172,7 +173,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Set the y-ticks and labels
         ax.set_yticks(y_values)
-        ax.set_yticklabels(annotations, fontsize=annotation_size, fontfamily=annotation_font)
+        font_prop = fm.FontProperties(family=annotation_font, size=annotation_size)
+        ax.set_yticklabels(annotations, fontproperties=font_prop)
 
         # Adjust the subplot to make room for the annotations
         plt.subplots_adjust(left=0.4)  # Adjust this value as needed
