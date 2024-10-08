@@ -10,12 +10,46 @@ from functools import lru_cache
 import time
 import re
 import matplotlib.font_manager as fm
-
+import streamlit.components.v1 as components
 
 
 
 # Function to load data from an uploaded Excel file
 @st.cache_data
+
+
+def font_selector(label, font_list):
+    font_options_html = "".join([
+        f'<option value="{font}" style="font-family: {font}">{font}</option>'
+        for font in font_list
+    ])
+    
+    custom_html = f"""
+    <div>
+        <label for="font-select">{label}</label>
+        <select id="font-select" onchange="document.getElementById('selected-font').value = this.value">
+            {font_options_html}
+        </select>
+        <input type="hidden" id="selected-font">
+    </div>
+    <script>
+        const selectElement = document.getElementById('font-select');
+        const inputElement = document.getElementById('selected-font');
+        selectElement.value = '{font_list[0]}';
+        inputElement.value = '{font_list[0]}';
+    </script>
+    """
+    
+    components.html(custom_html, height=50)
+    return st.session_state.get('selected_font', font_list[0])
+
+# List of fonts
+fonts = [
+    "Arial", "Helvetica", "Times New Roman", "Courier", "Verdana", 
+    "Georgia", "Palatino", "Garamond", "Bookman", "Comic Sans MS", 
+    "Trebuchet MS", "Arial Black", "Impact"
+]
+
 def load_data(uploaded_file):
     try:
         data = pd.read_excel(uploaded_file)
@@ -173,13 +207,16 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Set the y-ticks and labels
         ax.set_yticks(y_values)
-        try:
+        available_fonts = fm.findSystemFonts(fontpaths=None, fontext='ttf')
+        available_font_names = [fm.FontProperties(fname=f).get_name() for f in available_fonts]
+        
+        if annotation_font in available_font_names:
             font_prop = fm.FontProperties(family=annotation_font, size=annotation_size)
-            ax.set_yticklabels(annotations, fontproperties=font_prop)
-        except:
-            # If the specified font is not available, fall back to the default font
+        else:
             st.warning(f"The specified font '{annotation_font}' is not available. Using the default font instead.")
-            ax.set_yticklabels(annotations, fontsize=annotation_size)
+            font_prop = fm.FontProperties(size=annotation_size)
+        
+        ax.set_yticklabels(annotations, fontproperties=font_prop)
 
         # Adjust the subplot to make room for the annotations
         plt.subplots_adjust(left=0.4)  # Adjust this value as needed
@@ -431,17 +468,18 @@ if __name__ == "__main__":
                     with col1:
                         show_annotation_id = st.checkbox("Show Annotation IDs", value=False)
                     with col2:
-                        annotation_sort = st.selectbox("Sort annotations by", ["p-value", "name_length", "none"])
+                        annotation_sort = st.selectbox("Sort annotations by", [ "none","p-value", "name_length"])
                     with col3:
                         annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
                     
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        annotation_font = st.selectbox("Annotation font", ["Arial", "Times New Roman", "Courier"])
+                        annotation_font = font_selector("Annotation font", fonts)
                     with col2:
                         annotation_size = st.slider("Annotation font size", 6, 20, 10)
                     with col3:
                         legend_fontsize = st.slider("Legend font size", 6, 20, 10)
+                    st.write(f"Selected font: {annotation_font}")
                     
                     # Handle 'Allow More Rows' correctly:
                     allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
