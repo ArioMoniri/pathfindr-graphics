@@ -249,8 +249,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         plt.subplots_adjust(left=0.3) 
 
         # Adjust left margin based on the widest annotation
-        left_margin = max_annotation_width / fig.dpi / fig.get_figwidth() + 0.05
-        plt.subplots_adjust(left=left_margin)
+        plt.subplots_adjust(left=0.3)
 
         # Set labels and title
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
