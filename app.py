@@ -212,7 +212,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                              s=sizes, alpha=opacities, edgecolors='black')
 
         # Set the y-ticks and labels
-        ax.set_yticks(y_values)
+
         # Font handling
         if annotation_font != "Default":
             try:
@@ -225,7 +225,17 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             font_prop = fm.FontProperties(size=annotation_size)
         
-        ax.set_yticklabels(annotations, fontproperties=font_prop)
+        ax.set_yticks([])
+        ax.set_yticklabels([])
+
+        # Add annotations with alignment
+        for i, (annotation, x) in enumerate(zip(annotations, x_values)):
+            if annotation_alignment == 'left':
+                ax.text(ax.get_xlim()[0], i, f" {annotation}", va='center', ha='left', fontproperties=font_prop)
+            elif annotation_alignment == 'right':
+                ax.text(ax.get_xlim()[1], i, f"{annotation} ", va='center', ha='right', fontproperties=font_prop)
+            else:  # center
+                ax.text(np.mean(ax.get_xlim()), i, annotation, va='center', ha='center', fontproperties=font_prop)
 
         # Adjust the subplot to make room for the annotations
         plt.subplots_adjust(left=0.4)  # Adjust this value as needed
