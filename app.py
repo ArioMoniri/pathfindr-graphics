@@ -207,11 +207,15 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Create the figure and axes
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
         
+        # Adjust the plot area to make room for annotations
+        plt.subplots_adjust(left=0.4, right=0.95, top=0.95, bottom=0.1)
+
+        # Calculate the maximum circle size to adjust x-axis limits
+        max_circle_size = np.sqrt(max(sizes)) / 72  # Convert from points to inches
+
         # Plot the scatter points
         scatter = ax.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, 
                              s=sizes, alpha=opacities, edgecolors='black')
-
-        # Set the y-ticks and labels
 
         # Font handling
         if annotation_font != "Default":
@@ -224,31 +228,31 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                 font_prop = fm.FontProperties(size=annotation_size)
         else:
             font_prop = fm.FontProperties(size=annotation_size)
-        
+
         # Remove existing y-axis ticks and labels
         ax.set_yticks(y_values)
         ax.set_yticklabels([])
 
-        # Calculate the position for annotations
-        bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-        width, height = bbox.width, bbox.height
-        annotation_space = width * 0.5  # Adjust this value to change the space for annotations
-
         # Add annotations with alignment
+        max_annotation_width = 0
         for i, annotation in enumerate(annotations):
             if annotation_alignment == 'left':
-                ax.text(-annotation_space, i, annotation, va='center', ha='left', fontproperties=font_prop)
+                t = ax.text(-0.01, i, annotation, va='center', ha='right', fontproperties=font_prop, transform=ax.transAxes)
             elif annotation_alignment == 'right':
-                ax.text(-annotation_space * 0.25, i, annotation, va='center', ha='right', fontproperties=font_prop)
+                t = ax.text(-0.35, i, annotation, va='center', ha='right', fontproperties=font_prop, transform=ax.transAxes)
             else:  # center
-                ax.text(-annotation_space * 0.75, i, annotation, va='center', ha='center', fontproperties=font_prop)
+                t = ax.text(-0.18, i, annotation, va='center', ha='center', fontproperties=font_prop, transform=ax.transAxes)
+            bb = t.get_window_extent(renderer=fig.canvas.get_renderer())
+            max_annotation_width = max(max_annotation_width, bb.width)
 
-        # Adjust the subplot to make room for the annotations
-        plt.subplots_adjust(left=0.4)  # Adjust this value to change the left margin
+        # Adjust left margin based on the widest annotation
+        left_margin = max_annotation_width / fig.dpi / fig.get_figwidth() + 0.1
+        plt.subplots_adjust(left=left_margin)
 
         # Set labels and title
         ax.set_xlabel(x_label, fontsize=legend_fontsize)
         ax.set_ylabel(y_label, fontsize=legend_fontsize)
+        ax.yaxis.set_label_coords(-left_margin + 0.05, 0.5)
         ax.set_title(title, fontsize=legend_fontsize + 2)
 
         # Add colorbar
@@ -258,8 +262,9 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Create legends for size and opacity
         create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
-        # Adjust x-axis limits to add padding and accommodate annotations
-        ax.set_xlim([0, max(x_values) * 1.1])
+        # Adjust x-axis limits to ensure circles are fully visible
+        x_max = max(x_values) + max_circle_size * fig.dpi * fig.get_figwidth() / 10
+        ax.set_xlim(0, x_max)
 
         # Set y-axis limits
         ax.set_ylim(-1, len(annotations))
@@ -274,7 +279,6 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None, None, {}
-
         
         
 
