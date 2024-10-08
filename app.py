@@ -207,27 +207,16 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Set the y-ticks and labels
         ax.set_yticks(y_values)
-        font_found = False
-        font_prop = None
-        
-        # Get available font names
-        available_fonts = sorted(set([f.name for f in fm.fontManager.ttflist]))
-        
-        # First, try exact match
-        if annotation_font in available_fonts:
-            font_prop = fm.FontProperties(family=annotation_font, size=annotation_size)
-            font_found = True
+        # Font handling
+        if annotation_font != "Default":
+            try:
+                font_prop = fm.FontProperties(family=annotation_font, size=annotation_size)
+                test_text = ax.text(0, 0, "Test", fontproperties=font_prop)
+                test_text.remove()
+            except:
+                st.warning(f"Failed to use the font '{annotation_font}'. Using the default font instead.")
+                font_prop = fm.FontProperties(size=annotation_size)
         else:
-            # If exact match fails, try case-insensitive partial match
-            for font in available_fonts:
-                if annotation_font.lower() in font.lower():
-                    font_prop = fm.FontProperties(family=font, size=annotation_size)
-                    font_found = True
-                    st.info(f"Using font '{font}' as a close match for '{annotation_font}'.")
-                    break
-        
-        if not font_found:
-            st.warning(f"The specified font '{annotation_font}' is not available. Using the default font instead.")
             font_prop = fm.FontProperties(size=annotation_size)
         
         ax.set_yticklabels(annotations, fontproperties=font_prop)
