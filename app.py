@@ -174,9 +174,16 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         if selected_data.empty:
             return None, filtered_data, selected_data, discarded_data
 
+        # Sort annotations based on the selected option
+        if annotation_sort == "p-value":
+            selected_data = selected_data.sort_values(by=color_col, ascending=True)
+        elif annotation_sort == "name_length":
+            selected_data = selected_data.sort_values(by=y_col, key=lambda x: x.str.len(), ascending=False)
+        # For "none", we keep the original order
+
         # Define x_values and y_values
         x_values = selected_data[x_col].values
-        y_values = np.arange(len(selected_data))
+        y_values = range(len(selected_data))
         
         # Prepare annotations
         annotations = selected_data[y_col].tolist()
