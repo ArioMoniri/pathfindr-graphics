@@ -479,7 +479,7 @@ if __name__ == "__main__":
                         annotation_size = st.slider("Annotation font size", 6, 20, 10)
                     with col3:
                         legend_fontsize = st.slider("Legend font size", 6, 20, 10)
-                    st.write(f"Selected font: {annotation_font}")
+
                     
                     # Handle 'Allow More Rows' correctly:
                     allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
