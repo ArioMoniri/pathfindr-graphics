@@ -205,7 +205,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
 
         # Create the figure and axes
-        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), gridspec_kw={'width_ratios': [0.3, 0.7]})
+        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), gridspec_kw={'width_ratios': [0.4, 0.6]})
 
 
         # Plot the scatter points
