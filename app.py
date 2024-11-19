@@ -521,46 +521,7 @@ if __name__ == "__main__":
                     # Submit button for form
                     submit_button = st.form_submit_button("Generate Visualization")
                     
-# Show discarded rows due to filtering
-if filtered_data is not None:
-    discarded_data = df[~df.index.isin(filtered_data.index)]
-    if not discarded_data.empty:
-        st.write("### Rows Discarded Due to Filtering")
-        st.dataframe(discarded_data)
 
-                                  # Display discarded rows information
-                            st.write("### Rows Discarded Due to Filtering")
-                            if discarded_data:
-                                for col, discarded in discarded_data.items():
-                                    st.write(f"Discarded by {col} filter:")
-                                    st.dataframe(discarded)
-                            else:
-                                st.write("No rows were discarded by filtering.")
-                
-                            # If 'allow_more_rows' is True, show how many rows were retrieved
-                            if allow_more_rows and len(selected_data) > len(filtered_data):
-                                st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
-                        else:
-                            st.warning("No visualization could be generated with the current settings.")
-                    else:
-                        st.error("Unexpected result from plot_and_export_chart function.")
-                except Exception as e:
-                    st.error(f"An error occurred while generating the visualization: {str(e)}")
-                    st.error("Please check your inputs and try again.")                    
-                            
-                    # Show selected data in tab 2
-                    if selected_data is not None:
-                        st.write("### Selected Data for Visualization")
-                        st.dataframe(selected_data)
-                
-                
-                
-                    # Show discarded rows due to filtering
-                    if filtered_data is not None:
-                        discarded_data = df[~df.index.isin(filtered_data.index)]
-                        if not discarded_data.empty:
-                            st.write("### Rows Discarded Due to Filtering")
-                            st.dataframe(discarded_data)
 
 
 
@@ -608,8 +569,26 @@ if submit_button:
                 dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
                 buffer = save_and_download("tiff", dpi=dpi)
                 st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff') 
-    
 
+            # Display discarded data information - Single implementation
+                st.write("### Rows Discarded Due to Filtering")
+                if discarded_data:
+                    for col, discarded in discarded_data.items():
+                        st.write(f"Discarded by {col} filter:")
+                        st.dataframe(discarded)
+                else:
+                    st.write("No rows were discarded by filtering.")
+
+                # Show additional rows information
+                if allow_more_rows and len(selected_data) > len(filtered_data):
+                    st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
+            else:
+                st.warning("No visualization could be generated with the current settings.")
+        else:
+            st.error("Unexpected result from plot_and_export_chart function.")
+    except Exception as e:
+        st.error(f"An error occurred while generating the visualization: {str(e)}")
+        st.error("Please check your inputs and try again.")
 
             with tab3:
                 st.write("### Interactive Data Exploration with PyGWalker")
