@@ -580,11 +580,11 @@ if submit_button:
                     st.write("No rows were discarded by filtering.")
 
                             # Show additional rows information
-                            if allow_more_rows and len(selected_data) > len(filtered_data):
+                if allow_more_rows and len(selected_data) > len(filtered_data):
                                 st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
-                        else:
+                else:
                             st.warning("No visualization could be generated with the current settings.")
-                    else:
+                else:
                         st.error("Unexpected result from plot_and_export_chart function.")
                 except Exception as e:
                     st.error(f"An error occurred while generating the visualization: {str(e)}")
