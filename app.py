@@ -566,9 +566,9 @@ if __name__ == "__main__":
                                 st.dataframe(selected_data)
             
                             # Export options in tab 2
-                            if fig is not None:
-                                st.write("### Export Options")
-                                export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
+                       
+                            st.write("### Export Options")
+                            export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
             
                                 def save_and_download(format, dpi=600):
                                     buffer = BytesIO()
