@@ -518,7 +518,8 @@ if __name__ == "__main__":
                     
                     # Handle 'Allow More Rows' correctly:
                      allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
-
+                    # Submit button for form
+                    submit_button = st.form_submit_button("Generate Visualization")
                     
                             # Show discarded rows due to filtering
                             if filtered_data is not None:
@@ -526,8 +527,7 @@ if __name__ == "__main__":
                                 if not discarded_data.empty:
                                     st.write("### Rows Discarded Due to Filtering")
                                     st.dataframe(discarded_data)
-# Submit button for form
-submit_button = st.form_submit_button("Generate Visualization")
+
 
 # Generate the visualization if the form is submitted
 # Inside the main execution block, after generating the visualization
