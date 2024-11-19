@@ -571,24 +571,9 @@ if submit_button:
                 st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff') 
 
             # Display discarded data information - Single implementation
-                st.write("### Rows Discarded Due to Filtering")
-                if discarded_data:
-                    for col, discarded in discarded_data.items():
-                        st.write(f"Discarded by {col} filter:")
-                        st.dataframe(discarded)
-                else:
-                    st.write("No rows were discarded by filtering.")
 
-                            # Show additional rows information
-                if allow_more_rows and len(selected_data) > len(filtered_data):
-                                st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
-                else:
-                            st.warning("No visualization could be generated with the current settings.")
-                else:
-                        st.error("Unexpected result from plot_and_export_chart function.")
-                except Exception as e:
-                    st.error(f"An error occurred while generating the visualization: {str(e)}")
-                    st.error("Please check your inputs and try again.")
+
+    
 
             with tab3:
                 st.write("### Interactive Data Exploration with PyGWalker")
