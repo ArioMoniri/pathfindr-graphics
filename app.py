@@ -521,12 +521,12 @@ if __name__ == "__main__":
                     # Submit button for form
                     submit_button = st.form_submit_button("Generate Visualization")
                     
-                            # Show discarded rows due to filtering
-                            if filtered_data is not None:
-                                discarded_data = df[~df.index.isin(filtered_data.index)]
-                                if not discarded_data.empty:
-                                    st.write("### Rows Discarded Due to Filtering")
-                                    st.dataframe(discarded_data)
+                    # Show discarded rows due to filtering
+                    if filtered_data is not None:
+                        discarded_data = df[~df.index.isin(filtered_data.index)]
+                        if not discarded_data.empty:
+                            st.write("### Rows Discarded Due to Filtering")
+                            st.dataframe(discarded_data)
 
 
 # Generate the visualization if the form is submitted
