@@ -518,86 +518,94 @@ if __name__ == "__main__":
                     
                     # Handle 'Allow More Rows' correctly:
                      allow_more_rows = st.checkbox("Allow more rows if filters reduce selection below specified number")
-                    # Submit button for form
-                     submit_button = st.form_submit_button("Generate Visualization")
-            
-                    # Generate the visualization if the form is submitted
-                    # Inside the main execution block, after generating the visualization
-                    if submit_button:
-                        try:
-                            result = plot_and_export_chart(
-                                df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
-                                custom_title, custom_x_label, custom_y_label, custom_legend_label,
-                                sort_by, selection_method, num_pathways, fig_width, fig_height,
-                                min_size, max_size, min_opacity, max_opacity,
-                                size_increase, opacity_increase, size_factor, opacity_factor,
-                                show_annotation_id, annotation_sort, annotation_font, annotation_size,
-                                annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
-                            )
-                    
-                            if isinstance(result, tuple) and len(result) == 4:
-                                fig, filtered_data, selected_data, discarded_data = result
-                                if fig is not None:
-                                    st.pyplot(fig)
 
-                            if fig is not None:
-                                st.write("### Export Options")
-                                export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
-            
-                                def save_and_download(format, dpi=600):
-                                    buffer = BytesIO()
-                                    fig.savefig(buffer, format=format, dpi=dpi, bbox_inches='tight')
-                                    buffer.seek(0)
-                                    plt.close()
-                                    return buffer
-            
-                                if export_as == "JPG":
-                                    buffer = save_and_download("jpeg")
-                                    st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
-                                elif export_as == "PNG":
-                                    buffer = save_and_download("png")
-                                    st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
-                                elif export_as == "SVG":
-                                    buffer = save_and_download("svg")
-                                    st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
-                                elif export_as == "TIFF":
-                                    dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
-                                    buffer = save_and_download("tiff", dpi=dpi)
-                                    st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff') 
                     
-                                    # Display discarded rows information
-                                    st.write("### Rows Discarded Due to Filtering")
-                                    if discarded_data:
-                                        for col, discarded in discarded_data.items():
-                                            st.write(f"Discarded by {col} filter:")
-                                            st.dataframe(discarded)
-                                    else:
-                                        st.write("No rows were discarded by filtering.")
-                    
-                                    # If 'allow_more_rows' is True, show how many rows were retrieved
-                                    if allow_more_rows and len(selected_data) > len(filtered_data):
-                                        st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
-                                else:
-                                    st.warning("No visualization could be generated with the current settings.")
-                            else:
-                                st.error("Unexpected result from plot_and_export_chart function.")
-                        except Exception as e:
-                            st.error(f"An error occurred while generating the visualization: {str(e)}")
-                            st.error("Please check your inputs and try again.")                    
-                                    
-                            # Show selected data in tab 2
-                            if selected_data is not None:
-                                st.write("### Selected Data for Visualization")
-                                st.dataframe(selected_data)
-            
-
-            
                             # Show discarded rows due to filtering
                             if filtered_data is not None:
                                 discarded_data = df[~df.index.isin(filtered_data.index)]
                                 if not discarded_data.empty:
                                     st.write("### Rows Discarded Due to Filtering")
                                     st.dataframe(discarded_data)
+# Submit button for form
+submit_button = st.form_submit_button("Generate Visualization")
+
+# Generate the visualization if the form is submitted
+# Inside the main execution block, after generating the visualization
+if submit_button:
+try:
+    result = plot_and_export_chart(
+        df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
+        custom_title, custom_x_label, custom_y_label, custom_legend_label,
+        sort_by, selection_method, num_pathways, fig_width, fig_height,
+        min_size, max_size, min_opacity, max_opacity,
+        size_increase, opacity_increase, size_factor, opacity_factor,
+        show_annotation_id, annotation_sort, annotation_font, annotation_size,
+        annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
+    )
+
+    if isinstance(result, tuple) and len(result) == 4:
+        fig, filtered_data, selected_data, discarded_data = result
+        if fig is not None:
+            st.pyplot(fig)
+
+    if fig is not None:
+        st.write("### Export Options")
+        export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
+
+        def save_and_download(format, dpi=600):
+            buffer = BytesIO()
+            fig.savefig(buffer, format=format, dpi=dpi, bbox_inches='tight')
+            buffer.seek(0)
+            plt.close()
+            return buffer
+
+        if export_as == "JPG":
+            buffer = save_and_download("jpeg")
+            st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
+        elif export_as == "PNG":
+            buffer = save_and_download("png")
+            st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
+        elif export_as == "SVG":
+            buffer = save_and_download("svg")
+            st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
+        elif export_as == "TIFF":
+            dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
+            buffer = save_and_download("tiff", dpi=dpi)
+            st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff') 
+
+            # Display discarded rows information
+            st.write("### Rows Discarded Due to Filtering")
+            if discarded_data:
+                for col, discarded in discarded_data.items():
+                    st.write(f"Discarded by {col} filter:")
+                    st.dataframe(discarded)
+            else:
+                st.write("No rows were discarded by filtering.")
+
+            # If 'allow_more_rows' is True, show how many rows were retrieved
+            if allow_more_rows and len(selected_data) > len(filtered_data):
+                st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
+        else:
+            st.warning("No visualization could be generated with the current settings.")
+    else:
+        st.error("Unexpected result from plot_and_export_chart function.")
+except Exception as e:
+    st.error(f"An error occurred while generating the visualization: {str(e)}")
+    st.error("Please check your inputs and try again.")                    
+            
+    # Show selected data in tab 2
+    if selected_data is not None:
+        st.write("### Selected Data for Visualization")
+        st.dataframe(selected_data)
+
+
+
+    # Show discarded rows due to filtering
+    if filtered_data is not None:
+        discarded_data = df[~df.index.isin(filtered_data.index)]
+        if not discarded_data.empty:
+            st.write("### Rows Discarded Due to Filtering")
+            st.dataframe(discarded_data)
 
             with tab3:
                 st.write("### Interactive Data Exploration with PyGWalker")
