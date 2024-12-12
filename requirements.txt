@@ -8,3 +8,4 @@ bytesbufio
 pygwalker
 scipy
 regex
+streamlit_sortables
