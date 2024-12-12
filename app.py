@@ -542,11 +542,15 @@ if __name__ == "__main__":
                     submit_button = st.form_submit_button("Generate Visualization")
 
 
+                # Place this after the form but before the submit button handling
                 if annotation_sort == "manual_order":
                     st.write("### Manual Row Ordering")
                     st.write("Drag rows to reorder them. The new order will be applied when you click 'Generate Visualization'")
                     
                     # If we don't have the current order yet, generate it
+                    if 'current_order' not in st.session_state:
+                        st.session_state['current_order'] = None
+
                     if st.session_state['current_order'] is None:
                         temp_result = plot_and_export_chart(
                             df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
