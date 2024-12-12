@@ -558,8 +558,8 @@ if __name__ == "__main__":
                             sort_by, selection_method, num_pathways, fig_width, fig_height,
                             min_size, max_size, min_opacity, max_opacity,
                             size_increase, opacity_increase, size_factor, opacity_factor,
-                            show_annotation_id, "none", annotation_font, annotation_size,
-                            annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
+                            show_annotation_id, "none",
+                            annotation_alignment, sort_order_ascending
                         )
                         
                         if isinstance(temp_result, tuple) and len(temp_result) == 4:
