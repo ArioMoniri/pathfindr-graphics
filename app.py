@@ -530,16 +530,39 @@ if __name__ == "__main__":
                         annotation_alignment = st.selectbox("Annotation alignment", 
                                                         ["left", "right", "center"])
 
-                    # Store the current order in session state if manual_order is selected
+                    # Place this after the form but before the submit button handling
                     if annotation_sort == "manual_order":
+                        st.write("### Manual Row Ordering")
+                        st.write("Drag rows to reorder them. The new order will be applied when you click 'Generate Visualization'")
+                        
+                        # If we don't have the current order yet, generate it
                         if 'current_order' not in st.session_state:
-                            # Initialize with default order based on current settings
                             st.session_state['current_order'] = None
 
-                    # Your other form elements...
+                        if st.session_state['current_order'] is None:
+                            temp_result = plot_and_export_chart(
+                                df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
+                                custom_title, custom_x_label, custom_y_label, custom_legend_label,
+                                sort_by, selection_method, num_pathways, fig_width, fig_height,
+                                min_size, max_size, min_opacity, max_opacity,
+                                size_increase, opacity_increase, size_factor, opacity_factor,
+                                show_annotation_id, "none", annotation_font, annotation_size,
+                                annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
+                            )
+                            
+                            if isinstance(temp_result, tuple) and len(temp_result) == 4:
+                                _, _, temp_selected_data, _ = temp_result
+                                if temp_selected_data is not None:
+                                    st.session_state['current_order'] = temp_selected_data[y_col].tolist()
 
-                    # Submit button at the end of the form
-                    submit_button = st.form_submit_button("Generate Visualization")
+                        # Show the drag-and-drop interface
+                        if st.session_state['current_order'] is not None:
+                            sorted_labels = sort_items(
+                                st.session_state['current_order'],
+                                direction='vertical',
+                                key="manual_sort"
+                            )
+                            st.session_state['manual_sort_order'] = sorted_labels
 
 
                 # Place this after the form but before the submit button handling
