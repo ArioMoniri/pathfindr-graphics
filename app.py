@@ -518,44 +518,59 @@ if __name__ == "__main__":
                     
                     available_fonts = sorted(set([f.name for f in fm.fontManager.ttflist]))
                     # Inside tab2 for Annotation and Allow More Rows:
+                    # Annotation options
                     st.write("### Annotation Options")
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         show_annotation_id = st.checkbox("Show Annotation IDs", value=False)
                     with col2:
-                        # In tab2, within the form where you have the annotation options
                         annotation_sort = st.selectbox("Sort annotations by", 
                                                     ["none", "p-value", "name_length", "manual_order"])
+                    with col3:
+                        annotation_alignment = st.selectbox("Annotation alignment", 
+                                                        ["left", "right", "center"])
 
-                        # Add this right after the annotation sort selectbox
-                        if annotation_sort == "manual_order":
-                            # Get the current order of data based on other sorting criteria
-                            temp_result = plot_and_export_chart(
-                                df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
-                                custom_title, custom_x_label, custom_y_label, custom_legend_label,
-                                sort_by, selection_method, num_pathways, fig_width, fig_height,
-                                min_size, max_size, min_opacity, max_opacity,
-                                size_increase, opacity_increase, size_factor, opacity_factor,
-                                show_annotation_id, "none", annotation_font, annotation_size,
-                                annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
-                            )
-                            
-                            if isinstance(temp_result, tuple) and len(temp_result) == 4:
-                                _, _, temp_selected_data, _ = temp_result
-                                if temp_selected_data is not None:
-                                    st.write("### Drag to Reorder Rows")
-                                    st.write("Drag rows to desired positions, then click 'Generate Visualization' to apply changes")
-                                    
-                                    # Create a vertical drag-and-drop list
-                                    row_labels = temp_selected_data[y_col].tolist()
-                                    sorted_labels = sort_items(
-                                        row_labels,
-                                        direction='vertical',  # Make the list vertical
-                                        key="manual_sort"  # Unique key for the sortable list
-                                    )
-                                    
-                                    # Store the sorted labels in session state
-                                    st.session_state['manual_sort_order'] = sorted_labels
+                    # Store the current order in session state if manual_order is selected
+                    if annotation_sort == "manual_order":
+                        if 'current_order' not in st.session_state:
+                            # Initialize with default order based on current settings
+                            st.session_state['current_order'] = None
+
+                    # Your other form elements...
+
+                    # Submit button at the end of the form
+                    submit_button = st.form_submit_button("Generate Visualization")
+
+
+                if annotation_sort == "manual_order":
+                    st.write("### Manual Row Ordering")
+                    st.write("Drag rows to reorder them. The new order will be applied when you click 'Generate Visualization'")
+                    
+                    # If we don't have the current order yet, generate it
+                    if st.session_state['current_order'] is None:
+                        temp_result = plot_and_export_chart(
+                            df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
+                            custom_title, custom_x_label, custom_y_label, custom_legend_label,
+                            sort_by, selection_method, num_pathways, fig_width, fig_height,
+                            min_size, max_size, min_opacity, max_opacity,
+                            size_increase, opacity_increase, size_factor, opacity_factor,
+                            show_annotation_id, "none", annotation_font, annotation_size,
+                            annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
+                        )
+                        
+                        if isinstance(temp_result, tuple) and len(temp_result) == 4:
+                            _, _, temp_selected_data, _ = temp_result
+                            if temp_selected_data is not None:
+                                st.session_state['current_order'] = temp_selected_data[y_col].tolist()
+
+                    # Show the drag-and-drop interface
+                    if st.session_state['current_order'] is not None:
+                        sorted_labels = sort_items(
+                            st.session_state['current_order'],
+                            direction='vertical',
+                            key="manual_sort"
+                        )
+                        st.session_state['manual_sort_order'] = sorted_labels
 
                     with col3:
                         annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
@@ -618,7 +633,7 @@ if __name__ == "__main__":
                                         annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
                                     )
                         else:
-                            # Generate plot with normal sorting
+                            # Normal plot generation
                             result = plot_and_export_chart(
                                 df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
                                 custom_title, custom_x_label, custom_y_label, custom_legend_label,
@@ -629,67 +644,70 @@ if __name__ == "__main__":
                                 annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
                             )
 
+                        # Handle the result
                         if isinstance(result, tuple) and len(result) == 4:
                             fig, filtered_data, selected_data, discarded_data = result
                             if fig is not None:
                                 st.pyplot(fig)
-
-                                # Export options
-                                st.write("### Export Options")
-                                export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
-                                
-
-
-
-
-
-
-                                def save_and_download(format, dpi=600):
-                                    buffer = BytesIO()
-                                    fig.savefig(buffer, format=format, dpi=dpi, bbox_inches='tight')
-                                    buffer.seek(0)
-                                    return buffer
-
-                                if export_as == "JPG":
-                                    buffer = save_and_download("jpeg")
-                                    st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
-                                elif export_as == "PNG":
-                                    buffer = save_and_download("png")
-                                    st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
-                                elif export_as == "SVG":
-                                    buffer = save_and_download("svg")
-                                    st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
-                                elif export_as == "TIFF":
-                                    dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
-                                    buffer = save_and_download("tiff", dpi=dpi)
-                                    st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
-
-                                # Display selected data
-                                if selected_data is not None:
-                                    st.write("### Selected Data for Visualization")
-                                    st.dataframe(selected_data)
-
-                                # Display discarded rows information
-                                st.write("### Rows Discarded Due to Filtering")
-                                if discarded_data:
-                                    for col, discarded in discarded_data.items():
-                                        st.write(f"Discarded by {col} filter:")
-                                        st.dataframe(discarded)
-                                else:
-                                    st.write("No rows were discarded by filtering.")
-
-                                # If 'allow_more_rows' is True, show how many rows were retrieved
-                                if allow_more_rows and len(selected_data) > len(filtered_data):
-                                    st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
-
-                            else:
-                                st.warning("No visualization could be generated with the current settings.")
-                        else:
-                            st.error("Unexpected result from plot_and_export_chart function.")
+                                # Your export options and other display code...
 
                     except Exception as e:
-                        st.error(f"An error occurred while generating the visualization: {str(e)}")
-                        st.error("Please check your inputs and try again.")
+                        st.error(f"An error occurred: {str(e)}")
+
+                        # Export options
+                        st.write("### Export Options")
+                        export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
+                        
+
+
+
+
+
+
+                        def save_and_download(format, dpi=600):
+                            buffer = BytesIO()
+                            fig.savefig(buffer, format=format, dpi=dpi, bbox_inches='tight')
+                            buffer.seek(0)
+                            return buffer
+
+                        if export_as == "JPG":
+                            buffer = save_and_download("jpeg")
+                            st.download_button("Download JPG", buffer, file_name='chart.jpg', mime='image/jpeg')
+                        elif export_as == "PNG":
+                            buffer = save_and_download("png")
+                            st.download_button("Download PNG", buffer, file_name='chart.png', mime='image/png')
+                        elif export_as == "SVG":
+                            buffer = save_and_download("svg")
+                            st.download_button("Download SVG", buffer, file_name='chart.svg', mime='image/svg+xml')
+                        elif export_as == "TIFF":
+                            dpi = st.slider("Select DPI for TIFF", min_value=100, max_value=1200, value=600, step=50)
+                            buffer = save_and_download("tiff", dpi=dpi)
+                            st.download_button("Download TIFF", buffer, file_name='chart.tiff', mime='image/tiff')
+
+                        # Display selected data
+                        if selected_data is not None:
+                            st.write("### Selected Data for Visualization")
+                            st.dataframe(selected_data)
+
+                        # Display discarded rows information
+                        st.write("### Rows Discarded Due to Filtering")
+                        if discarded_data:
+                            for col, discarded in discarded_data.items():
+                                st.write(f"Discarded by {col} filter:")
+                                st.dataframe(discarded)
+                        else:
+                            st.write("No rows were discarded by filtering.")
+
+                        # If 'allow_more_rows' is True, show how many rows were retrieved
+                        if allow_more_rows and len(selected_data) > len(filtered_data):
+                            st.write(f"Number of rows retrieved from discarded data: {len(selected_data) - len(filtered_data)}")
+
+                    else:
+                        st.warning("No visualization could be generated with the current settings.")
+                else:
+                    st.error("Unexpected result from plot_and_export_chart function.")
+
+
 
             with tab3:
                 st.write("### Interactive Data Exploration with PyGWalker")
