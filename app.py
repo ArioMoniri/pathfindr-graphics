@@ -601,12 +601,7 @@ if __name__ == "__main__":
                                 # Export options
                                 st.write("### Export Options")
                                 export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
-                                
-                                # Rest of your export code...
 
-                    except Exception as e:
-                        st.error(f"An error occurred while generating the visualization: {str(e)}")
-                        st.error("Please check your inputs and try again.")
 
 
 
