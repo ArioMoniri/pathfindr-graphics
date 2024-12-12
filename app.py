@@ -11,6 +11,7 @@ import time
 import re
 import matplotlib.font_manager as fm
 import streamlit.components.v1 as components
+from st_draggable_list import DraggableList
 
 
 
@@ -174,8 +175,14 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         if selected_data.empty:
             return None, filtered_data, selected_data, discarded_data
 
-        # Sort annotations based on the selected option
-        if annotation_sort == "p-value":
+        # Apply sorting based on annotation_sort
+        if annotation_sort == "manual" and 'manual_sort_order' in st.session_state:
+            # Create a mapping for sorting
+            sort_order_dict = {name: i for i, name in enumerate(st.session_state.manual_sort_order)}
+            selected_data['sort_key'] = selected_data[y_col].map(sort_order_dict)
+            selected_data = selected_data.sort_values('sort_key')
+            selected_data = selected_data.drop('sort_key', axis=1)
+        elif annotation_sort == "p-value":
             selected_data = selected_data.sort_values(by=color_col, ascending=True)
         elif annotation_sort == "name_length":
             selected_data = selected_data.sort_values(by=y_col, key=lambda x: x.str.len(), ascending=False)
@@ -498,7 +505,28 @@ if __name__ == "__main__":
                     with col1:
                         show_annotation_id = st.checkbox("Show Annotation IDs", value=False)
                     with col2:
-                        annotation_sort = st.selectbox("Sort annotations by", [ "none","p-value", "name_length"])
+                        annotation_sort = st.selectbox("Sort annotations by", ["none", "p-value", "name_length", "manual"])
+                        if annotation_sort == "manual":
+                            if 'manual_sort_order' not in st.session_state:
+                                # Initialize with default order from selected data
+                                st.session_state.manual_sort_order = selected_data[y_col].tolist() if selected_data is not None else []
+                            
+                            st.write("### Manual Sort Order")
+                            st.write("Drag and drop items to reorder them:")
+                            
+                            # Create a container for the draggable list
+                            with st.container():
+                                # Display draggable list
+                                updated_order = DraggableList(
+                                    st.session_state.manual_sort_order,
+                                    key="pathway_order"
+                                ).render()
+                                
+                                # Update session state with new order
+                                if updated_order != st.session_state.manual_sort_order:
+                                    st.session_state.manual_sort_order = updated_order
+
+
                     with col3:
                         annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
                     
