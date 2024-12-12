@@ -523,7 +523,40 @@ if __name__ == "__main__":
                     with col1:
                         show_annotation_id = st.checkbox("Show Annotation IDs", value=False)
                     with col2:
-                        annotation_sort = st.selectbox("Sort annotations by", ["none", "p-value", "name_length", "manual_order"])
+                        # In tab2, within the form where you have the annotation options
+                        annotation_sort = st.selectbox("Sort annotations by", 
+                                                    ["none", "p-value", "name_length", "manual_order"])
+
+                        # Add this right after the annotation sort selectbox
+                        if annotation_sort == "manual_order":
+                            # Get the current order of data based on other sorting criteria
+                            temp_result = plot_and_export_chart(
+                                df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
+                                custom_title, custom_x_label, custom_y_label, custom_legend_label,
+                                sort_by, selection_method, num_pathways, fig_width, fig_height,
+                                min_size, max_size, min_opacity, max_opacity,
+                                size_increase, opacity_increase, size_factor, opacity_factor,
+                                show_annotation_id, "none", annotation_font, annotation_size,
+                                annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
+                            )
+                            
+                            if isinstance(temp_result, tuple) and len(temp_result) == 4:
+                                _, _, temp_selected_data, _ = temp_result
+                                if temp_selected_data is not None:
+                                    st.write("### Drag to Reorder Rows")
+                                    st.write("Drag rows to desired positions, then click 'Generate Visualization' to apply changes")
+                                    
+                                    # Create a vertical drag-and-drop list
+                                    row_labels = temp_selected_data[y_col].tolist()
+                                    sorted_labels = sort_items(
+                                        row_labels,
+                                        direction='vertical',  # Make the list vertical
+                                        key="manual_sort"  # Unique key for the sortable list
+                                    )
+                                    
+                                    # Store the sorted labels in session state
+                                    st.session_state['manual_sort_order'] = sorted_labels
+
                     with col3:
                         annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
                     
@@ -552,55 +585,61 @@ if __name__ == "__main__":
 
                 if submit_button:
                     try:
-                        # First generate the initial visualization
-                        result = plot_and_export_chart(
-                            df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
-                            custom_title, custom_x_label, custom_y_label, custom_legend_label,
-                            sort_by, selection_method, num_pathways, fig_width, fig_height,
-                            min_size, max_size, min_opacity, max_opacity,
-                            size_increase, opacity_increase, size_factor, opacity_factor,
-                            show_annotation_id, annotation_sort, annotation_font, annotation_size,
-                            annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
-                        )
+                        # Check if we're using manual sorting
+                        if annotation_sort == "manual_order" and 'manual_sort_order' in st.session_state:
+                            # Get the manually sorted order
+                            sorted_labels = st.session_state['manual_sort_order']
+                            
+                            # First get the initial data
+                            temp_result = plot_and_export_chart(
+                                df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
+                                custom_title, custom_x_label, custom_y_label, custom_legend_label,
+                                sort_by, selection_method, num_pathways, fig_width, fig_height,
+                                min_size, max_size, min_opacity, max_opacity,
+                                size_increase, opacity_increase, size_factor, opacity_factor,
+                                show_annotation_id, "none", annotation_font, annotation_size,
+                                annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
+                            )
+                            
+                            if isinstance(temp_result, tuple) and len(temp_result) == 4:
+                                _, _, selected_data, _ = temp_result
+                                if selected_data is not None:
+                                    # Reorder the data according to manual sorting
+                                    selected_data = selected_data.set_index(y_col).loc[sorted_labels].reset_index()
+                                    
+                                    # Generate the final plot with manual ordering
+                                    result = plot_and_export_chart(
+                                        selected_data, x_col, y_col, color_col, size_col, opacity_col, 
+                                        ranges, colormap, custom_title, custom_x_label, custom_y_label, 
+                                        custom_legend_label, sort_by, selection_method, len(selected_data), 
+                                        fig_width, fig_height, min_size, max_size, min_opacity, max_opacity,
+                                        size_increase, opacity_increase, size_factor, opacity_factor,
+                                        show_annotation_id, "none", annotation_font, annotation_size,
+                                        annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
+                                    )
+                        else:
+                            # Generate plot with normal sorting
+                            result = plot_and_export_chart(
+                                df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
+                                custom_title, custom_x_label, custom_y_label, custom_legend_label,
+                                sort_by, selection_method, num_pathways, fig_width, fig_height,
+                                min_size, max_size, min_opacity, max_opacity,
+                                size_increase, opacity_increase, size_factor, opacity_factor,
+                                show_annotation_id, annotation_sort, annotation_font, annotation_size,
+                                annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
+                            )
 
                         if isinstance(result, tuple) and len(result) == 4:
                             fig, filtered_data, selected_data, discarded_data = result
                             if fig is not None:
-                                # Display initial plot
                                 st.pyplot(fig)
-
-                                # Handle manual ordering if selected
-                                if annotation_sort == "manual_order":
-                                    st.write("### Manual Row Ordering")
-                                    st.write("Drag rows to reorder them, then click 'Update Plot' to apply changes")
-                                    
-                                    # Display current order with drag capability
-                                    if selected_data is not None:
-                                        row_labels = selected_data[y_col].tolist()
-                                        sorted_labels = sort_items(row_labels)
-                                        
-                                        # Add button to update plot with new order
-                                        if st.button("Update Plot"):
-                                            # Reorder the data
-                                            selected_data = selected_data.set_index(y_col).loc[sorted_labels].reset_index()
-                                            
-                                            # Regenerate the plot with reordered data
-                                            new_fig, _, _, _ = plot_and_export_chart(
-                                                selected_data, x_col, y_col, color_col, size_col, opacity_col, 
-                                                ranges, colormap, custom_title, custom_x_label, custom_y_label, 
-                                                custom_legend_label, sort_by, selection_method, len(selected_data), 
-                                                fig_width, fig_height, min_size, max_size, min_opacity, max_opacity,
-                                                size_increase, opacity_increase, size_factor, opacity_factor,
-                                                show_annotation_id, annotation_sort, annotation_font, annotation_size,
-                                                annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
-                                            )
-                                            
-                                            # Display updated plot
-                                            st.pyplot(new_fig)
 
                                 # Export options
                                 st.write("### Export Options")
                                 export_as = st.selectbox("Select format to export:", ["JPG", "PNG", "SVG", "TIFF"])
+                                
+
+
 
 
 
