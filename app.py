@@ -540,45 +540,39 @@ if __name__ == "__main__":
                             st.session_state.manual_sort_initialized = False
                         annotation_sort = st.selectbox("Sort annotations by", 
                                                     ["none", "p-value", "name_length", "manual_order"])
-                        if annotation_sort == "manual":
-                            # Get initial data for manual sorting if not already initialized
-                            if not st.session_state.manual_sort_initialized:
-                                # Get initial data without manual sorting
-                                temp_result = plot_and_export_chart(
-                                    df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
-                                    custom_title, custom_x_label, custom_y_label, custom_legend_label,
-                                    sort_by, selection_method, num_pathways, fig_width, fig_height,
-                                    min_size, max_size, min_opacity, max_opacity,
-                                    size_increase, opacity_increase, size_factor, opacity_factor,
-                                    show_annotation_id, "none", annotation_font, annotation_size,
-                                    annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
-                                )
-                                
-                                if isinstance(temp_result, tuple) and len(temp_result) == 4:
-                                    _, _, temp_selected_data, _ = temp_result
-                                    if temp_selected_data is not None:
-                                        st.session_state.selected_data = temp_selected_data
-                                        st.session_state.manual_sort_order = temp_selected_data[y_col].tolist()
-                                        st.session_state.manual_sort_initialized = True
-
-                            if hasattr(st.session_state, 'manual_sort_order') and st.session_state.manual_sort_order:
-                                st.write("### Manual Sort Order")
-                                st.write("Drag and drop items to reorder them:")
-                                
-                                # Create a container for the draggable list
-                                with st.container():
-                                    # Display draggable list
-                                    updated_order = DraggableList(
-                                        st.session_state.manual_sort_order,
-                                        key="pathway_order"
-                                    ).render()
-                                    
-                                    # Update session state with new order
-                                    if updated_order != st.session_state.manual_sort_order:
-                                        st.session_state.manual_sort_order = updated_order
+   
+   
                     with col3:
                         annotation_alignment = st.selectbox("Annotation alignment", 
                                                         ["left", "right", "center"])
+                        
+                    if annotation_sort == "manual":
+                        if 'selected_data' not in st.session_state:
+                            st.session_state.selected_data = None
+                        if 'manual_sort_initialized' not in st.session_state:
+                            st.session_state.manual_sort_initialized = False
+                            
+                        if not st.session_state.manual_sort_initialized and 'y_col' in locals():
+                            # Initialize with default order from the dataframe
+                            initial_order = df[y_col].head(num_pathways).tolist()
+                            st.session_state.manual_sort_order = initial_order
+                            st.session_state.manual_sort_initialized = True
+
+                        if hasattr(st.session_state, 'manual_sort_order') and st.session_state.manual_sort_order:
+                            st.write("### Manual Sort Order")
+                            st.write("Drag and drop items to reorder them:")
+                            
+                            # Create a container for the draggable list
+                            with st.container():
+                                # Display draggable list
+                                updated_order = DraggableList(
+                                    st.session_state.manual_sort_order,
+                                    key="pathway_order"
+                                ).render()
+                                
+                                # Update session state with new order
+                                if updated_order != st.session_state.manual_sort_order:
+                                    st.session_state.manual_sort_order = updated_order
 
 
 
