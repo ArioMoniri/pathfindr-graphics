@@ -516,7 +516,7 @@ if __name__ == "__main__":
                     with col2:
                         annotation_sort = st.selectbox("Sort annotations by", ["none", "p-value", "name_length", "Manual"])
                     with col3:
-                        manual_order = None  # Initialize manual order
+                        manual_order = []  # Initialize manual order
                         if annotation_sort == "Manual":
                             if 'manual_pathway_order' not in st.session_state:
                                 st.session_state.manual_pathway_order = df[y_col].unique().tolist()
@@ -537,7 +537,12 @@ if __name__ == "__main__":
                             if grid_response['data']:
                                 st.session_state.manual_pathway_order = grid_response['data']
                     
-                        manual_order = st.session_state.manual_pathway_order
+                            if 'manual_pathway_order' in st.session_state:
+                                manual_order = st.session_state.manual_pathway_order
+                            else:
+                                manual_order = None
+                            if annotation_sort == "Manual":
+                                st.session_state.manual_pathway_order = manual_order
                         annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
                     # Add the submit button here
                     submit_button = st.form_submit_button("Generate Visualization")
