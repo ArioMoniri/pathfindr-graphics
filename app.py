@@ -209,11 +209,15 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
 
         # Plot the scatter points
-        scatter = ax2.scatter(x_values, y_values, c=selected_data[color_col], cmap=colormap, 
+        scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), cmap=colormap, 
                               s=sizes, alpha=opacities, edgecolors='black')
         ax2.spines['left'].set_position(('outward', 10)) 
         ax2.set_yticks(y_values)
-        ax2.set_yticklabels([])  # Avoid y-tick labels since they are in the other plot
+        ax2.set_yticklabels([])  
+        color_data = pd.to_numeric(selected_data[color_col], errors='coerce')
+        if color_data.notnull().sum() == 0:
+            st.warning(f"The selected color column '{color_col}' does not contain any numeric data. Please select a numeric column for color mapping.")
+            return None, filtered_data, selected_data, discarded_data# Avoid y-tick labels since they are in the other plot
 
 
         # Font handling
