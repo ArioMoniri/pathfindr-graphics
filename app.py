@@ -539,6 +539,9 @@ if __name__ == "__main__":
                     
                         manual_order = st.session_state.manual_pathway_order
                     
+                    # Add the submit button here
+                    submit_button = st.form_submit_button("Generate Visualization")
+                    
         
                         annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
                     
