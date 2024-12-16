@@ -263,7 +263,16 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         create_legends(ax2, sizes, opacities, size_col, opacity_col, legend_fontsize)
 
         # Adjust x-axis limits to ensure circles are fully visible
-        ax2.set_xlim(min(x_values) - 0.5, max(x_values) * 1.1)  # Add padding to the left of the plot
+        if pd.api.types.is_numeric_dtype(selected_data[x_col]):
+            x_values = selected_data[x_col]
+            ax2.set_xlim(min(x_values) - 0.5, max(x_values) * 1.1)
+        else:
+            x_values = range(len(selected_data))
+            ax2.set_xlim(-0.5, len(x_values) - 0.5)
+            ax2.set_xticks(x_values)
+            ax2.set_xticklabels(selected_data[x_col], rotation=45, ha='right')
+        
+        y_values = range(len(selected_data)) # Add padding to the left of the plot
 
 
         # Set y-axis limits
