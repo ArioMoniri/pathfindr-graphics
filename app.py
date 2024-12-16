@@ -538,12 +538,12 @@ if __name__ == "__main__":
                                 st.session_state.manual_pathway_order = grid_response['data']
                     
                         manual_order = st.session_state.manual_pathway_order
-                    
+                        annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
                     # Add the submit button here
                     submit_button = st.form_submit_button("Generate Visualization")
                     
         
-                        annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
+
                     
                     col1, col2, col3 = st.columns(3)
                     with col1:
