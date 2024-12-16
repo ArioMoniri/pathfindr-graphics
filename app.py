@@ -157,20 +157,36 @@ def create_legends(ax, sizes, opacities, size_col, opacity_col, legend_fontsize)
     plt.tight_layout()
     plt.subplots_adjust(right=0.2)
 
+
+def get_sorted_filtered_data(df, sort_by, ranges, selection_method, num_pathways, allow_more_rows, manual_order=None):
+    # ... (filtering and selection logic remains the same)
+
+    if manual_order:
+        # Create a mapping from pathway name to its manual position
+        order_map = {name: i for i, name in enumerate(manual_order)}
+        # Apply the manual order, handling cases where pathways might be filtered out
+        selected_data['manual_sort_order'] = selected_data[y_col].map(order_map)
+        selected_data = selected_data.sort_values(by='manual_sort_order')
+        selected_data = selected_data.drop(columns=['manual_sort_order'])  # Remove the temporary column
+    elif sort_by != "Manual":
+        selected_data = selected_data.sort_values(by=sort_by, ascending=False)
+
+    return selected_data, filtered_data, discarded_data
+
+
 # Updated plot_and_export_chart function
-def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges, 
-                          colormap, title, x_label, y_label, legend_label, sort_by, 
-                          selection_method, num_pathways, fig_width, fig_height, 
-                          min_size, max_size, min_opacity, max_opacity, 
+def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ranges,
+                          colormap, title, x_label, y_label, legend_label, sort_by,
+                          selection_method, num_pathways, fig_width, fig_height,
+                          min_size, max_size, min_opacity, max_opacity,
                           size_increase, opacity_increase, size_factor, opacity_factor,
                           show_annotation_id, annotation_sort, annotation_font, annotation_size,
-                          annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending=True):
+                          annotation_alignment, legend_fontsize, allow_more_rows, manual_order=None):
     try:
-        # Get the sorted and filtered data
         selected_data, filtered_data, discarded_data = get_sorted_filtered_data(
-            df, sort_by, ranges, selection_method, num_pathways, allow_more_rows
+            df, sort_by, ranges, selection_method, num_pathways, allow_more_rows, manual_order
         )
-        
+
         if selected_data.empty:
             return None, filtered_data, selected_data, discarded_data
 
@@ -498,8 +514,32 @@ if __name__ == "__main__":
                     with col1:
                         show_annotation_id = st.checkbox("Show Annotation IDs", value=False)
                     with col2:
-                        annotation_sort = st.selectbox("Sort annotations by", [ "none","p-value", "name_length"])
+                        annotation_sort = st.selectbox("Sort annotations by", ["none", "p-value", "name_length", "Manual"])
                     with col3:
+                        manual_order = None  # Initialize manual order
+                        if annotation_sort == "Manual":
+                            if 'manual_pathway_order' not in st.session_state:
+                                st.session_state.manual_pathway_order = df[y_col].unique().tolist()
+                    
+                            gb = GridOptionsBuilder.from_list(st.session_state.manual_pathway_order)
+                            gb.configure_grid_options(domLayout='normal')
+                            gb.configure_default_column(editable=True)
+                            gridOptions = gb.build()
+                    
+                            grid_response = AgGrid(
+                                st.session_state.manual_pathway_order,
+                                gridOptions=gridOptions,
+                                height=300,
+                                width='100%',
+                                update_mode=GridUpdateMode.MODEL_CHANGED,
+                                allow_unsafe_jscode=True,  # Set it to True to allow js function to be injected
+                            )
+                            if grid_response['data']:
+                                st.session_state.manual_pathway_order = grid_response['data']
+                    
+                        manual_order = st.session_state.manual_pathway_order
+                    
+        
                         annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
                     
                     col1, col2, col3 = st.columns(3)
@@ -533,9 +573,8 @@ if __name__ == "__main__":
                             min_size, max_size, min_opacity, max_opacity,
                             size_increase, opacity_increase, size_factor, opacity_factor,
                             show_annotation_id, annotation_sort, annotation_font, annotation_size,
-                            annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
+                            annotation_alignment, legend_fontsize, allow_more_rows, manual_order  # Pass manual_order
                         )
-
                         if isinstance(result, tuple) and len(result) == 4:
                             fig, filtered_data, selected_data, discarded_data = result
                             if fig is not None:
