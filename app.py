@@ -200,29 +200,32 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         if selected_data.empty:
             return None, filtered_data, selected_data, discarded_data
 
-        # Sort annotations based on the selected option
-        # Show drag and drop interface first if that option is selected
+        # Handle sorting based on selected option
         if annotation_sort == "drag_and_drop":
-            st.write("### Drag and Drop Sorting")
-            st.write("Drag rows to reorder them, then click 'Apply Order' to update the visualization")
-            
-            drag_drop_data = pd.DataFrame({
-                'Annotation': selected_data[y_col],
-                'Value': selected_data[sort_by]
-            })
-            
-            grid_response = create_draggable_table(drag_drop_data)
-            
-            # Add an apply button after the drag and drop table
-            if st.button('Apply Order'):
-                if grid_response['data'] is not None:
-                    custom_order = grid_response['data']['Annotation'].tolist()
-                    selected_data = selected_data.set_index(y_col).loc[custom_order].reset_index()
-            else:
-                # Return None to prevent plot generation until order is applied
+            # Check if we're in the dragging phase
+            if 'custom_order_applied' not in st.session_state:
+                st.session_state.custom_order_applied = False
+
+            if not st.session_state.custom_order_applied:
+                st.write("### Drag and Drop Sorting")
+                st.write("Drag rows to reorder them, then click 'Apply Order'")
+                
+                drag_drop_data = pd.DataFrame({
+                    'Annotation': selected_data[y_col],
+                    'Value': selected_data[sort_by]
+                })
+                
+                grid_response = create_draggable_table(drag_drop_data)
+                
+                if st.button('Apply Order'):
+                    if grid_response['data'] is not None:
+                        st.session_state.custom_order = grid_response['data']['Annotation'].tolist()
+                        st.session_state.custom_order_applied = True
+                        st.experimental_rerun()
                 return None, filtered_data, selected_data, discarded_data
-        
-        # Rest of the sorting options
+            else:
+                # Apply the saved custom order
+                selected_data = selected_data.set_index(y_col).loc[st.session_state.custom_order].reset_index()
         elif annotation_sort == "p-value":
             selected_data = selected_data.sort_values(by=color_col, ascending=True)
         elif annotation_sort == "name_length":
@@ -231,6 +234,12 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             selected_data = selected_data.sort_values(by=y_col, ascending=True)
         elif annotation_sort == "reverse_alphabetic":
             selected_data = selected_data.sort_values(by=y_col, ascending=False)
+
+        # Reset the custom order flag if we switch to a different sorting method
+        if annotation_sort != "drag_and_drop" and 'custom_order_applied' in st.session_state:
+            del st.session_state.custom_order_applied
+            if 'custom_order' in st.session_state:
+                del st.session_state.custom_order
 
         # For "none", we keep the original order
 
@@ -592,10 +601,19 @@ if __name__ == "__main__":
                     with col1:
                         show_annotation_id = st.checkbox("Show Annotation IDs", value=False)
                     with col2:
+                        previous_sort = st.session_state.get('previous_sort', None)
                         annotation_sort = st.selectbox(
-    "Sort annotations by", 
-    ["none", "p-value", "name_length", "alphabetic", "reverse_alphabetic", "drag_and_drop"]
-)
+                            "Sort annotations by", 
+                            ["none", "p-value", "name_length", "alphabetic", "reverse_alphabetic", "drag_and_drop"]
+                        )
+                        
+                        # Reset drag and drop state if sorting method changes
+                        if previous_sort != annotation_sort:
+                            if 'custom_order_applied' in st.session_state:
+                                del st.session_state.custom_order_applied
+                            if 'custom_order' in st.session_state:
+                                del st.session_state.custom_order
+                        st.session_state.previous_sort = annotation_sort
                     with col3:
                         annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
                     
