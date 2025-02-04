@@ -232,6 +232,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             extension = current_range * 0.05
         x_min_extended = x_min - extension
         x_max_extended = x_max + extension
+        y_values = np.arange(len(selected_data))
         # Plot the scatter points
         scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), 
                              cmap=colormap, s=sizes, alpha=opacities, edgecolors='black')
@@ -271,7 +272,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax1.axis('off')  # Hide axis for annotations
                 # Set axis limits
         ax2.set_ylim(-0.5, len(selected_data) - 0.5)
-        ax1.set_ylim(-0.1, len(selected_data) - 0.05)
+        ax1.set_ylim(-0.1, len(selected_data) - 0.1)
 
         # Adjust the subplot to make room for the annotations and reduce space between plots
         plt.subplots_adjust(wspace=0.01)  # Adjust space between the subplots
