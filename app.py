@@ -202,11 +202,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Handle sorting based on selected option
         if annotation_sort == "drag_and_drop":
-            # Check if we're in the dragging phase
-            if 'custom_order_applied' not in st.session_state:
-                st.session_state.custom_order_applied = False
-
-            if not st.session_state.custom_order_applied:
+            # Only show drag and drop interface if custom order hasn't been applied
+            if not st.session_state.get('custom_order_applied', False):
                 st.write("### Drag and Drop Sorting")
                 st.write("Drag rows to reorder them, then click 'Apply Order'")
                 
@@ -235,11 +232,13 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         elif annotation_sort == "reverse_alphabetic":
             selected_data = selected_data.sort_values(by=y_col, ascending=False)
 
-        # Reset the custom order flag if we switch to a different sorting method
-        if annotation_sort != "drag_and_drop" and 'custom_order_applied' in st.session_state:
-            del st.session_state.custom_order_applied
+        # Reset drag and drop state when switching to a different sorting method
+        if annotation_sort != "drag_and_drop":
+            if 'custom_order_applied' in st.session_state:
+                del st.session_state.custom_order_applied
             if 'custom_order' in st.session_state:
                 del st.session_state.custom_order
+
 
         # For "none", we keep the original order
 
@@ -640,6 +639,9 @@ if __name__ == "__main__":
                     # Inside the main execution block, after generating the visualization
                 # Inside tab2, after the form submission and visualization generation
                 if submit_button:
+                    # Initialize or get the session state for drag and drop
+                    if 'custom_order_applied' not in st.session_state:
+                        st.session_state.custom_order_applied = False
                     try:
                         result = plot_and_export_chart(
                             df, x_col, y_col, color_col, size_col, opacity_col, ranges, colormap,
@@ -651,10 +653,15 @@ if __name__ == "__main__":
                             annotation_alignment, legend_fontsize, allow_more_rows, sort_order_ascending
                         )
 
+                        # Only proceed with visualization if we have a result and it's not in the drag-drop state
                         if isinstance(result, tuple) and len(result) == 4:
                             fig, filtered_data, selected_data, discarded_data = result
-                            if fig is not None:
-                                st.pyplot(fig)
+                            
+                            # Check if we're not in the drag-drop interface or if we have a custom order applied
+                            if (annotation_sort != "drag_and_drop" or 
+                                st.session_state.get('custom_order_applied', False)):
+                                if fig is not None:
+                                    st.pyplot(fig)
 
                                 # Export options
                                 st.write("### Export Options")
