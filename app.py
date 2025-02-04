@@ -1,4 +1,4 @@
-import streamlit as st
+    import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -206,7 +206,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Create the figure and axes
         fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), 
-                                      gridspec_kw={'width_ratios':[5 , 3]})  
+                                      gridspec_kw={'width_ratios':[3 , 3]})  
 
         # Add these lines before the scatter plot
         x_min = min(x_values)
@@ -233,8 +233,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         x_min_extended = x_min - extension
         x_max_extended = x_max + extension
         # Plot the scatter points
-        scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), cmap=colormap, 
-                              s=sizes, alpha=opacities, edgecolors='black')
+        scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), 
+                             cmap=colormap, s=sizes, alpha=opacities, edgecolors='black')
         #ax2.spines['left'].set_position(('outward', 100)) 
         ax2.set_yticks(y_values)
         ax2.set_yticklabels([])  
@@ -259,9 +259,9 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Add annotations in ax1
         for i, annotation in enumerate(annotations):
             if annotation_alignment == 'left':
-                ax1.text(0.1, i, annotation, va='center', ha='left', fontproperties=font_prop)  # Align more to left
+                ax1.text(0.05, i, annotation, va='center', ha='left', fontproperties=font_prop)  # Align more to left
             elif annotation_alignment == 'right':
-                ax1.text(0.9, i, annotation, va='center', ha='right', fontproperties=font_prop)
+                ax1.text(0.95, i, annotation, va='center', ha='right', fontproperties=font_prop)
             else:  # center
                 ax1.text(0.5, i, annotation, va='center', ha='center', fontproperties=font_prop)
 
@@ -270,18 +270,18 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax1.set_xlim([0, 1])
         ax1.axis('off')  # Hide axis for annotations
                 # Set axis limits
-        #ax1.set_ylim(-0.5, len(selected_data) - 0.5)
-        #ax2.set_ylim(-0.5, len(selected_data) - 0.5)
+        ax2.set_ylim(-0.5, len(selected_data) - 0.5)
+        ax1.set_ylim(-0.5, len(selected_data) - 0.5)
 
         # Adjust the subplot to make room for the annotations and reduce space between plots
-        plt.subplots_adjust(wspace=0.1)  # Adjust space between the subplots
+        plt.subplots_adjust(wspace=0.01)  # Adjust space between the subplots
 
         # Set labels and title in ax2 (scatter plot)
         ax2.set_xlabel(x_label, fontsize=legend_fontsize)
         ax2.set_ylabel(y_label, fontsize=legend_fontsize)
         ax2.set_title(title, fontsize=legend_fontsize + 2)
-        ax2.set_aspect(3)
-
+        #ax2.set_aspect(3)
+        ax2.grid(True, axis='y', linestyle='--', alpha=0.3)
 
         # Add colorbar
         cbar = plt.colorbar(scatter)
