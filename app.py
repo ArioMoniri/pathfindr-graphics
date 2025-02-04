@@ -206,7 +206,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Create the figure and axes
         fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), 
-                                      gridspec_kw={'width_ratios': [3.25, 1.2]})  
+                                      gridspec_kw={'width_ratios': 3,5 ]})  
 
         # Add these lines before the scatter plot
         x_min = min(x_values)
@@ -280,7 +280,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax2.set_xlabel(x_label, fontsize=legend_fontsize)
         ax2.set_ylabel(y_label, fontsize=legend_fontsize)
         ax2.set_title(title, fontsize=legend_fontsize + 2)
-        ax2.set_aspect(0.7)
+        ax2.set_aspect(2)
 
 
         # Add colorbar
