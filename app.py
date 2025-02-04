@@ -211,7 +211,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Plot the scatter points
         scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), cmap=colormap, 
                               s=sizes, alpha=opacities, edgecolors='black')
-        ax2.spines['left'].set_position(('outward', 20)) 
+        ax2.spines['left'].set_position(('outward', 30)) 
         ax2.set_yticks(y_values)
         ax2.set_yticklabels([])  
         color_data = pd.to_numeric(selected_data[color_col], errors='coerce')
@@ -245,6 +245,9 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax1.set_yticklabels(annotations, fontsize=annotation_size) 
         ax1.set_xlim([0, 1])
         ax1.axis('off')  # Hide axis for annotations
+                # Set axis limits
+        ax1.set_ylim(-0.5, len(selected_data) - 0.5)
+        ax2.set_ylim(-0.5, len(selected_data) - 0.5)
 
         # Adjust the subplot to make room for the annotations and reduce space between plots
         plt.subplots_adjust(wspace=0.045)  # Adjust space between the subplots
