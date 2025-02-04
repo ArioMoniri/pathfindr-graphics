@@ -237,8 +237,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax2.set_yticks([])
         
         # Set axis limits
-        ax1.set_ylim(0.5, len(selected_data) + 0.5)
-        ax2.set_ylim(0.5, len(selected_data) + 0.5)
+        ax1.set_ylim(1.5, len(selected_data) + 1)
+        ax2.set_ylim(1.5, len(selected_data) + 1)
         
         if pd.api.types.is_numeric_dtype(selected_data[x_col]):
             x_range = max(x_values) - min(x_values)
