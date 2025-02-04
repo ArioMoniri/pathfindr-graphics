@@ -204,16 +204,17 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
 
-        # Create the figure and axes
-        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), gridspec_kw={'width_ratios': [0.6, 0.8]})
+        # Create the figure and axes with adjusted width ratios
+        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), gridspec_kw={'width_ratios': [0.4, 1]})
 
-
-        # Plot the scatter points
+        # Plot the scatter points with adjusted position
         scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), cmap=colormap, 
                               s=sizes, alpha=opacities, edgecolors='black')
-        ax2.spines['left'].set_position(('outward', 10)) 
-        ax2.set_yticks(y_values)
-        ax2.set_yticklabels([])  
+        
+        # Remove the left spine and ticks from ax2
+        ax2.spines['left'].set_visible(False)
+        ax2.set_yticks([])
+        ax2.set_yticklabels([])
         color_data = pd.to_numeric(selected_data[color_col], errors='coerce')
         if color_data.notnull().sum() == 0:
             st.warning(f"The selected color column '{color_col}' does not contain any numeric data. Please select a numeric column for color mapping.")
