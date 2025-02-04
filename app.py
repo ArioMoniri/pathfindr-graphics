@@ -74,6 +74,7 @@ def create_draggable_table(data):
         data,
         gridOptions=grid_options,
         update_mode=GridUpdateMode.SELECTION_CHANGED | GridUpdateMode.VALUE_CHANGED,
+        data_return_mode=DataReturnMode.AS_INPUT,  # Add this line
         allow_unsafe_jscode=True,
         theme="material",
         height=400
@@ -196,31 +197,30 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             return None, filtered_data, selected_data, discarded_data
 
         # Sort annotations based on the selected option
+        # Sort annotations based on the selected option
         if annotation_sort == "p-value":
             selected_data = selected_data.sort_values(by=color_col, ascending=True)
-        if annotation_sort == "name_length":
+        elif annotation_sort == "name_length":
             selected_data = selected_data.sort_values(by=y_col, key=lambda x: x.str.len(), ascending=False)
-        if annotation_sort == "alphabetic":
+        elif annotation_sort == "alphabetic":
             selected_data = selected_data.sort_values(by=y_col, ascending=True)
         elif annotation_sort == "reverse_alphabetic":
             selected_data = selected_data.sort_values(by=y_col, ascending=False)
-        elif annotation_sort == "drag_and_drop" and 'custom_order' in st.session_state:
-            custom_order = st.session_state['custom_order']
-            selected_data = selected_data.set_index(y_col).loc[custom_order].reset_index()
-        
-        return selected_data, filtered_data, discarded_data
-    
+        elif annotation_sort == "drag_and_drop":
+            st.write("### Drag and Drop Sorting")
+            st.write("Drag rows to reorder them, then click 'Generate Visualization'")
+            
             # Create a subset of data for the drag and drop table
             drag_drop_data = pd.DataFrame({
-                'Annotation': selected_data[y_col] if selected_data is not None else df[y_col],
-                'Value': selected_data[sort_by] if selected_data is not None else df[sort_by]
+                'Annotation': selected_data[y_col],
+                'Value': selected_data[sort_by]
             })
-    
+            
             grid_response = create_draggable_table(drag_drop_data)
             
             if grid_response['data'] is not None:
-                # Store the custom order in session state
-                st.session_state['custom_order'] = grid_response['data']['Annotation'].tolist()
+                custom_order = grid_response['data']['Annotation'].tolist()
+                selected_data = selected_data.set_index(y_col).loc[custom_order].reset_index()
 
         # For "none", we keep the original order
 
