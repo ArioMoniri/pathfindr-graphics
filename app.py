@@ -215,7 +215,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax2 = fig.add_axes([0.6, 0.1, 0.35, 2.8])  # Right side for scatter
         
         # Configure text axis
-        ax1.axis('off')
+
         
         # Add annotations with proper spacing
         #for i, annotation in enumerate(annotations):
