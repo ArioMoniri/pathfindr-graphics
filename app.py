@@ -244,8 +244,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax2.set_frame_on(True)
         ax2.grid(False)
         
-# Adjust the spacing between subplots to eliminate gaps
-        plt.subplots_adjust(wspace=-0.2)
+
         color_data = pd.to_numeric(selected_data[color_col], errors='coerce')
         if color_data.notnull().sum() == 0:
             st.warning(f"The selected color column '{color_col}' does not contain any numeric data. Please select a numeric column for color mapping.")
