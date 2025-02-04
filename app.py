@@ -211,7 +211,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         x_min = min(x_values)
         x_max = max(x_values)
         x_range = x_max - x_min
-        extension = x_range * 0.05
+        extension = x_range * 0.25
         x_min_extended = x_min - extension
         x_max_extended = x_max + extension
         # Plot the scatter points
