@@ -211,9 +211,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         main_ax = fig.add_axes([0, 0, 1, 1])
         main_ax.axis('off')
         
-        # Create two sub-axes with proper positioning
-        ax1 = fig.add_axes([0.1, 0.1, 0.5, 0.8])  # Left side for text
-        ax2 = fig.add_axes([0.6, 0.1, 0.35, 0.8])  # Right side for scatter
+        # Create two sub-axes with proper positioning 
+        ax2 = fig.add_axes([0.6, 0.1, 0.35, 2.8])  # Right side for scatter
         
         # Configure text axis
         ax1.axis('off')
@@ -237,8 +236,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax2.set_yticks([])
         
         # Set axis limits
-        ax1.set_ylim(1.5, len(selected_data) + 1)
-        ax2.set_ylim(1.5, len(selected_data) + 1)
+        ax1.set_ylim(0, len(selected_data) + 0.1)
+        ax2.set_ylim(0, len(selected_data) + 0.1)
         
         if pd.api.types.is_numeric_dtype(selected_data[x_col]):
             x_range = max(x_values) - min(x_values)
