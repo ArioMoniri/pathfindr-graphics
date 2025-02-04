@@ -271,7 +271,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax1.set_xlim([0, 1])
         ax1.axis('off')  # Hide axis for annotations
                 # Set axis limits
-        ax1.set_ylim(-1, len(selected_data) - 0.1)
+        ax1.set_ylim(-1, len(selected_data) - 0.08)
         ax2.set_ylim(-0.5, len(selected_data) - 0.5)
 
         # Adjust the subplot to make room for the annotations and reduce space between plots
