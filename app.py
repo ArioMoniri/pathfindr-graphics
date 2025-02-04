@@ -219,8 +219,8 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax1.axis('off')
         
         # Add annotations with proper spacing
-        for i, annotation in enumerate(annotations):
-            ax1.text(1.0, i, annotation, va='center', ha='right', fontsize=annotation_size)
+        #for i, annotation in enumerate(annotations):
+            #ax1.text(1.0, i, annotation, va='center', ha='right', fontsize=annotation_size)
         
         # Plot scatter points
         scatter = ax2.scatter(x_values, y_values, 
