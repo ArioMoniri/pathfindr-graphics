@@ -205,9 +205,15 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
 
         # Create the figure and axes
-        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), gridspec_kw={'width_ratios': [0.6, 4.8]})
+        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), gridspec_kw={'width_ratios': [0.6, 2.8]})
 
-
+        # Add these lines before the scatter plot
+        x_min = min(x_values)
+        x_max = max(x_values)
+        x_range = x_max - x_min
+        extension = x_range * 0.05
+        x_min_extended = x_min - extension
+        x_max_extended = x_max + extension
         # Plot the scatter points
         scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), cmap=colormap, 
                               s=sizes, alpha=opacities, edgecolors='black')
@@ -268,10 +274,10 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Adjust x-axis limits to ensure circles are fully visible
         if pd.api.types.is_numeric_dtype(selected_data[x_col]):
             x_values = selected_data[x_col]
-            ax2.set_xlim(min(x_values) - 0.5, max(x_values) * 1.1)
+            ax2.set_xlim([x_min_extended, x_max_extended])
         else:
             x_values = range(len(selected_data))
-            ax2.set_xlim(-0.5, len(x_values) - 0.5)
+            ax2.set_xlim([x_min_extended, x_max_extended])
             ax2.set_xticks(x_values)
             ax2.set_xticklabels(selected_data[x_col], rotation=45, ha='right')
         
