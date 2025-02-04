@@ -211,7 +211,24 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         x_min = min(x_values)
         x_max = max(x_values)
         x_range = x_max - x_min
-        extension = x_range * 0.25
+        # Calculate the average difference between consecutive x values
+        x_sorted = np.sort(x_values)
+        avg_diff = np.mean(np.diff(x_sorted))
+        
+        # Set a minimum pixel difference we want to maintain between points (adjust as needed)
+        min_pixel_diff = 50  # minimum pixels between points
+        
+        # Calculate the required range expansion factor
+        current_range = x_max - x_min
+        plot_width_pixels = fig_width * 72  # Convert inches to pixels (72 DPI)
+        points_per_pixel = current_range / plot_width_pixels
+        
+        # If the average difference is too small, expand the range
+        if avg_diff < (min_pixel_diff * points_per_pixel):
+            expansion_factor = (min_pixel_diff * points_per_pixel) / avg_diff
+            extension = (current_range * expansion_factor - current_range) / 2
+        else:
+            extension = current_range * 0.05
         x_min_extended = x_min - extension
         x_max_extended = x_max + extension
         # Plot the scatter points
