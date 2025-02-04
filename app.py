@@ -66,18 +66,22 @@ def load_data(uploaded_file):
 def create_draggable_table(data):
     gb = GridOptionsBuilder.from_dataframe(data)
     gb.configure_default_column(resizable=True, filterable=True, sorteable=True)
-    gb.configure_grid_options(rowDragManaged=True, rowDragEntireRow=True)
+    gb.configure_grid_options(
+        rowDragManaged=True, 
+        rowDragEntireRow=True,
+        animateRows=True  # Add this for smooth reordering animation
+    )
     gb.configure_selection(selection_mode="multiple", use_checkbox=True)
-    grid_options = gb.build()
     
     return AgGrid(
         data,
-        gridOptions=grid_options,
-        update_mode=GridUpdateMode.SELECTION_CHANGED | GridUpdateMode.VALUE_CHANGED,
-        data_return_mode=DataReturnMode.AS_INPUT,  # Add this line
+        gridOptions=gb.build(),
+        update_mode=GridUpdateMode.MODEL_CHANGED,  # Change this
+        data_return_mode=DataReturnMode.AS_INPUT,
         allow_unsafe_jscode=True,
         theme="material",
-        height=400
+        height=400,
+        key="drag_drop_grid"  # Add a unique key
     )
 # Function to generate a custom colormap
 @lru_cache(maxsize=None)
@@ -197,20 +201,11 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             return None, filtered_data, selected_data, discarded_data
 
         # Sort annotations based on the selected option
-        # Sort annotations based on the selected option
-        if annotation_sort == "p-value":
-            selected_data = selected_data.sort_values(by=color_col, ascending=True)
-        elif annotation_sort == "name_length":
-            selected_data = selected_data.sort_values(by=y_col, key=lambda x: x.str.len(), ascending=False)
-        elif annotation_sort == "alphabetic":
-            selected_data = selected_data.sort_values(by=y_col, ascending=True)
-        elif annotation_sort == "reverse_alphabetic":
-            selected_data = selected_data.sort_values(by=y_col, ascending=False)
-        elif annotation_sort == "drag_and_drop":
+        # Show drag and drop interface first if that option is selected
+        if annotation_sort == "drag_and_drop":
             st.write("### Drag and Drop Sorting")
-            st.write("Drag rows to reorder them, then click 'Generate Visualization'")
+            st.write("Drag rows to reorder them, then click 'Apply Order' to update the visualization")
             
-            # Create a subset of data for the drag and drop table
             drag_drop_data = pd.DataFrame({
                 'Annotation': selected_data[y_col],
                 'Value': selected_data[sort_by]
@@ -218,9 +213,24 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             
             grid_response = create_draggable_table(drag_drop_data)
             
-            if grid_response['data'] is not None:
-                custom_order = grid_response['data']['Annotation'].tolist()
-                selected_data = selected_data.set_index(y_col).loc[custom_order].reset_index()
+            # Add an apply button after the drag and drop table
+            if st.button('Apply Order'):
+                if grid_response['data'] is not None:
+                    custom_order = grid_response['data']['Annotation'].tolist()
+                    selected_data = selected_data.set_index(y_col).loc[custom_order].reset_index()
+            else:
+                # Return None to prevent plot generation until order is applied
+                return None, filtered_data, selected_data, discarded_data
+        
+        # Rest of the sorting options
+        elif annotation_sort == "p-value":
+            selected_data = selected_data.sort_values(by=color_col, ascending=True)
+        elif annotation_sort == "name_length":
+            selected_data = selected_data.sort_values(by=y_col, key=lambda x: x.str.len(), ascending=False)
+        elif annotation_sort == "alphabetic":
+            selected_data = selected_data.sort_values(by=y_col, ascending=True)
+        elif annotation_sort == "reverse_alphabetic":
+            selected_data = selected_data.sort_values(by=y_col, ascending=False)
 
         # For "none", we keep the original order
 
