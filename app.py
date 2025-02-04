@@ -215,15 +215,17 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), cmap=colormap, 
                             s=sizes, alpha=opacities, edgecolors='black')
         
-        # Configure the scatter plot axis (ax2)
-        ax2.spines['left'].set_visible(False)
-        ax2.spines['top'].set_visible(True)
-        ax2.spines['right'].set_visible(True)
-        ax2.spines['bottom'].set_visible(True)
+        # Configure the scatter plot axis (ax2) with specific spine colors and width
+        for spine in ax2.spines.values():
+            spine.set_visible(True)
+            spine.set_color('#663366')  # Purplish color for spines
+            spine.set_linewidth(1.5)    # Adjust line width for visibility
+        
         ax2.set_yticks([])
         
-        # Ensure the plot extends to the edges
+        # Ensure proper frame and grid settings
         ax2.set_frame_on(True)
+        ax2.grid(False)
         color_data = pd.to_numeric(selected_data[color_col], errors='coerce')
         if color_data.notnull().sum() == 0:
             st.warning(f"The selected color column '{color_col}' does not contain any numeric data. Please select a numeric column for color mapping.")
