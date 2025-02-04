@@ -204,46 +204,43 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
 
-# Create the figure and axes with better proportions
+# Create the figure and axes with improved proportions
         fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), 
-                                      gridspec_kw={'width_ratios': [2, 1], 'wspace': 0})
+                                      gridspec_kw={'width_ratios': [1.5, 1]})
 
-        # Calculate the maximum text width to adjust spacing
-        max_text_width = max([len(str(text)) for text in annotations])
-        font_size = min(10, 200 / max_text_width)  # Dynamically adjust font size
-        
         # Configure the annotation axis (ax1)
         ax1.set_xlim(0, 1)
         ax1.axis('off')
 
-        # Add annotations in ax1 with dynamic positioning
+        # Add annotations with consistent spacing
         for i, annotation in enumerate(annotations):
-            ax1.text(0.95, i, annotation, va='center', ha='right', fontsize=font_size)
+            ax1.text(1.0, i, annotation, va='center', ha='right', fontsize=annotation_size)
 
-        # Plot the scatter points
+        # Plot the scatter points with proper spacing
         scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), 
-                            cmap=colormap, s=sizes, alpha=opacities, edgecolors='black')
+                            cmap=colormap, s=sizes, alpha=opacities, edgecolors='black', clip_on=False)
         
-        # Configure the scatter plot axis (ax2) with proper spines
-        for spine in ax2.spines.values():
-            spine.set_visible(True)
-            spine.set_color('#663366')
-            spine.set_linewidth(1.5)
+        # Configure spines to not overlap with points
+        ax2.spines['left'].set_visible(False)
+        ax2.spines['right'].set_position(('outward', 10))
+        ax2.spines['top'].set_position(('outward', 10))
+        ax2.spines['bottom'].set_position(('outward', 10))
         
-        # Remove y-ticks but keep the spine
+        # Set spine appearance
+        for spine in ['right', 'top', 'bottom']:
+            ax2.spines[spine].set_color('#663366')
+            ax2.spines[spine].set_linewidth(1.5)
+        
+        # Remove ticks
         ax2.set_yticks([])
         
-        # Adjust x-axis limits to ensure circles are fully visible
-        x_padding = 0.15 * (max(x_values) - min(x_values))
+        # Set axis limits to prevent circle clipping
+        x_padding = 0.2 * (max(x_values) - min(x_values))
         ax2.set_xlim(min(x_values) - x_padding, max(x_values) + x_padding)
-        
-        # Match y-axis limits precisely
         ax2.set_ylim(-0.5, len(selected_data) - 0.5)
         
-        # Ensure proper frame visibility
-        ax2.set_frame_on(True)
-        ax2.grid(False)
-        
+# Adjust subplot spacing
+        plt.subplots_adjust(wspace=0.1, left=0.1, right=0.9)
 
         color_data = pd.to_numeric(selected_data[color_col], errors='coerce')
         if color_data.notnull().sum() == 0:
