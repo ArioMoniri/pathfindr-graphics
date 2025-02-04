@@ -280,7 +280,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax2.set_xlabel(x_label, fontsize=legend_fontsize)
         ax2.set_ylabel(y_label, fontsize=legend_fontsize)
         ax2.set_title(title, fontsize=legend_fontsize + 2)
-        ax2.set_aspect(2)
+        ax2.set_aspect(5)
 
 
         # Add colorbar
