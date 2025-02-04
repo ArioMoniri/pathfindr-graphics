@@ -206,7 +206,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Create the figure and axes
         fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), 
-                                      gridspec_kw={'width_ratios':[3 , 3]})  
+                                      gridspec_kw={'width_ratios':[5 , 3]})  
 
         # Add these lines before the scatter plot
         x_min = min(x_values)
@@ -271,7 +271,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax1.axis('off')  # Hide axis for annotations
                 # Set axis limits
         ax2.set_ylim(-0.5, len(selected_data) - 0.5)
-        ax1.set_ylim(-1, len(selected_data) - 1)
+        ax1.set_ylim(-0.1, len(selected_data) - 0.1)
 
         # Adjust the subplot to make room for the annotations and reduce space between plots
         plt.subplots_adjust(wspace=0.01)  # Adjust space between the subplots
@@ -280,7 +280,6 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         ax2.set_xlabel(x_label, fontsize=legend_fontsize)
         ax2.set_ylabel(y_label, fontsize=legend_fontsize)
         ax2.set_title(title, fontsize=legend_fontsize + 2)
-        ax2.set_aspect(3)
 
 
         # Add colorbar
