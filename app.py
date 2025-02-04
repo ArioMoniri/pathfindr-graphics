@@ -11,6 +11,10 @@ import time
 import re
 import matplotlib.font_manager as fm
 import streamlit.components.v1 as components
+from st_aggrid import AgGrid, GridUpdateMode, GridOptionsBuilder
+from st_aggrid.grid_options_builder import GridOptionsBuilder
+from st_aggrid.shared import GridUpdateMode, DataReturnMode
+
 
 
 
@@ -57,6 +61,23 @@ def load_data(uploaded_file):
         st.error(f"Error loading file: {str(e)}")
         return None
 
+
+# Add this function after the load_data function
+def create_draggable_table(data):
+    gb = GridOptionsBuilder.from_dataframe(data)
+    gb.configure_default_column(resizable=True, filterable=True, sorteable=True)
+    gb.configure_grid_options(rowDragManaged=True, rowDragEntireRow=True)
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+    grid_options = gb.build()
+    
+    return AgGrid(
+        data,
+        gridOptions=grid_options,
+        update_mode=GridUpdateMode.SELECTION_CHANGED | GridUpdateMode.VALUE_CHANGED,
+        allow_unsafe_jscode=True,
+        theme="material",
+        height=400
+    )
 # Function to generate a custom colormap
 @lru_cache(maxsize=None)
 def generate_colormap(color1, color2):
@@ -177,8 +198,30 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Sort annotations based on the selected option
         if annotation_sort == "p-value":
             selected_data = selected_data.sort_values(by=color_col, ascending=True)
-        elif annotation_sort == "name_length":
+        if annotation_sort == "name_length":
             selected_data = selected_data.sort_values(by=y_col, key=lambda x: x.str.len(), ascending=False)
+        if annotation_sort == "alphabetic":
+            selected_data = selected_data.sort_values(by=y_col, ascending=True)
+        elif annotation_sort == "reverse_alphabetic":
+            selected_data = selected_data.sort_values(by=y_col, ascending=False)
+        elif annotation_sort == "drag_and_drop" and 'custom_order' in st.session_state:
+            custom_order = st.session_state['custom_order']
+            selected_data = selected_data.set_index(y_col).loc[custom_order].reset_index()
+        
+        return selected_data, filtered_data, discarded_data
+    
+            # Create a subset of data for the drag and drop table
+            drag_drop_data = pd.DataFrame({
+                'Annotation': selected_data[y_col] if selected_data is not None else df[y_col],
+                'Value': selected_data[sort_by] if selected_data is not None else df[sort_by]
+            })
+    
+            grid_response = create_draggable_table(drag_drop_data)
+            
+            if grid_response['data'] is not None:
+                # Store the custom order in session state
+                st.session_state['custom_order'] = grid_response['data']['Annotation'].tolist()
+
         # For "none", we keep the original order
 
         # Define x_values and y_values
@@ -539,7 +582,10 @@ if __name__ == "__main__":
                     with col1:
                         show_annotation_id = st.checkbox("Show Annotation IDs", value=False)
                     with col2:
-                        annotation_sort = st.selectbox("Sort annotations by", [ "none","p-value", "name_length"])
+                        annotation_sort = st.selectbox(
+    "Sort annotations by", 
+    ["none", "p-value", "name_length", "alphabetic", "reverse_alphabetic", "drag_and_drop"]
+)
                     with col3:
                         annotation_alignment = st.selectbox("Annotation alignment", ["left", "right", "center"])
                     
