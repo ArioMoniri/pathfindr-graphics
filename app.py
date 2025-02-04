@@ -216,7 +216,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         avg_diff = np.mean(np.diff(x_sorted))
         
         # Set a minimum pixel difference we want to maintain between points (adjust as needed)
-        min_pixel_diff = 50  # minimum pixels between points
+        min_pixel_diff = 150  # minimum pixels between points
         
         # Calculate the required range expansion factor
         current_range = x_max - x_min
