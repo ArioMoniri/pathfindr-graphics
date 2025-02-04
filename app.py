@@ -204,17 +204,26 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
 
-        # Create the figure and axes with adjusted width ratios
-        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), gridspec_kw={'width_ratios': [0.4, 1]})
+        # Create the figure and axes with adjusted width ratios for better text alignment
+        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), gridspec_kw={'width_ratios': [1.2, 1]})
+
+        # Configure the annotation axis (ax1)
+        ax1.set_xlim(0, 1)
+        ax1.axis('off')
 
         # Plot the scatter points with adjusted position
         scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), cmap=colormap, 
-                              s=sizes, alpha=opacities, edgecolors='black')
+                            s=sizes, alpha=opacities, edgecolors='black')
         
-        # Remove the left spine and ticks from ax2
+        # Configure the scatter plot axis (ax2)
         ax2.spines['left'].set_visible(False)
+        ax2.spines['top'].set_visible(True)
+        ax2.spines['right'].set_visible(True)
+        ax2.spines['bottom'].set_visible(True)
         ax2.set_yticks([])
-        ax2.set_yticklabels([])
+        
+        # Ensure the plot extends to the edges
+        ax2.set_frame_on(True)
         color_data = pd.to_numeric(selected_data[color_col], errors='coerce')
         if color_data.notnull().sum() == 0:
             st.warning(f"The selected color column '{color_col}' does not contain any numeric data. Please select a numeric column for color mapping.")
