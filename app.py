@@ -204,51 +204,16 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         else:
             opacities = np.full(len(selected_data), (min_opacity + max_opacity) / 2)
 
-# Create the figure with proper dimensions
-        fig = plt.figure(figsize=(fig_width, fig_height))
-        
-        # Create a main axes for the plot frame
-        main_ax = fig.add_axes([0, 0, 1, 1])
-        main_ax.axis('off')
-        
-        # Create two sub-axes with proper positioning 
-        ax2 = fig.add_axes([0.6, 0.1, 0.35, 2.8])  # Right side for scatter
-        
-        # Configure text axis
-
-        
-        # Add annotations with proper spacing
-        #for i, annotation in enumerate(annotations):
-            #ax1.text(1.0, i, annotation, va='center', ha='right', fontsize=annotation_size)
-        
-        # Plot scatter points
-        scatter = ax2.scatter(x_values, y_values, 
-                            c=pd.to_numeric(selected_data[color_col], errors='coerce'),
-                            cmap=colormap, s=sizes, alpha=opacities, edgecolors='black')
-        
-        # Configure scatter plot frame
-        for spine in ax2.spines.values():
-            spine.set_visible(True)
-            spine.set_color('#663366')
-            spine.set_linewidth(1.5)
-        
-        # Remove y-axis elements while keeping frame
-        ax2.set_yticks([])
-        
-        # Set axis limits
-
-        ax2.set_ylim(0, len(selected_data) + 0.1)
-        
-        if pd.api.types.is_numeric_dtype(selected_data[x_col]):
-            x_range = max(x_values) - min(x_values)
-            ax2.set_xlim(min(x_values) - 0.05 * x_range, max(x_values) + 0.15 * x_range)
+        # Create the figure and axes
+        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(fig_width, fig_height), gridspec_kw={'width_ratios': [0.6, 0.8]})
 
 
-
-
-
-        
-
+        # Plot the scatter points
+        scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), cmap=colormap, 
+                              s=sizes, alpha=opacities, edgecolors='black')
+        ax2.spines['left'].set_position(('outward', 20)) 
+        ax2.set_yticks(y_values)
+        ax2.set_yticklabels([])  
         color_data = pd.to_numeric(selected_data[color_col], errors='coerce')
         if color_data.notnull().sum() == 0:
             st.warning(f"The selected color column '{color_col}' does not contain any numeric data. Please select a numeric column for color mapping.")
