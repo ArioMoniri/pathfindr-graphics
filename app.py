@@ -66,22 +66,30 @@ def load_data(uploaded_file):
 def create_draggable_table(data):
     gb = GridOptionsBuilder.from_dataframe(data)
     gb.configure_default_column(resizable=True, filterable=True, sorteable=True)
+    
+    # Configure drag and drop settings
     gb.configure_grid_options(
-        rowDragManaged=True, 
+        rowDragManaged=True,
         rowDragEntireRow=True,
-        animateRows=True  # Add this for smooth reordering animation
+        animateRows=True
     )
-    gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+    
+    # Remove checkbox selection
+    gb.configure_selection(selection_mode="single", use_checkbox=False)
+    
+    # Configure specific columns
+    gb.configure_column('Annotation', width=300)  # Adjust width for annotation text
+    gb.configure_column('Value', width=100)  # Adjust width for value column
     
     return AgGrid(
         data,
         gridOptions=gb.build(),
-        update_mode=GridUpdateMode.MODEL_CHANGED,  # Change this
+        update_mode=GridUpdateMode.MODEL_CHANGED,
         data_return_mode=DataReturnMode.AS_INPUT,
         allow_unsafe_jscode=True,
         theme="material",
-        height=400,
-        key="drag_drop_grid"  # Add a unique key
+        height=300,  # Reduced height to minimize empty space
+        key="drag_drop_grid"
     )
 # Function to generate a custom colormap
 @lru_cache(maxsize=None)
@@ -200,29 +208,53 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         if selected_data.empty:
             return None, filtered_data, selected_data, discarded_data
 
+        # Store original data before sorting
+        original_selected_data = selected_data.copy()
+
         # Handle sorting based on selected option
         if annotation_sort == "drag_and_drop":
-            # Only show drag and drop interface if custom order hasn't been applied
             if not st.session_state.get('custom_order_applied', False):
                 st.write("### Drag and Drop Sorting")
-                st.write("Drag rows to reorder them, then click 'Apply Order'")
+                st.write("Drag rows to reorder them")
                 
                 drag_drop_data = pd.DataFrame({
                     'Annotation': selected_data[y_col],
                     'Value': selected_data[sort_by]
                 })
                 
+                # Create drag-drop interface with minimal gap
                 grid_response = create_draggable_table(drag_drop_data)
                 
-                if st.button('Apply Order'):
-                    if grid_response['data'] is not None:
-                        st.session_state.custom_order = grid_response['data']['Annotation'].tolist()
-                        st.session_state.custom_order_applied = True
-                        st.experimental_rerun()
-                return None, filtered_data, selected_data, discarded_data
-            else:
-                # Apply the saved custom order
-                selected_data = selected_data.set_index(y_col).loc[st.session_state.custom_order].reset_index()
+                # Place button immediately after the table
+                col1, col2, col3 = st.columns([1, 1, 1])
+                with col2:
+                    if st.button('Apply Order and Generate Plot'):
+                        if grid_response['data'] is not None:
+                            st.session_state.custom_order = grid_response['data']['Annotation'].tolist()
+                            st.session_state.custom_order_applied = True
+                            # Apply the custom order immediately
+                            selected_data = selected_data.set_index(y_col).loc[st.session_state.custom_order].reset_index()
+                        else:
+                            st.error("No data received from drag and drop interface")
+                            return None, filtered_data, selected_data, discarded_data
+                    
+                if not st.session_state.get('custom_order_applied', False):
+                    return None, filtered_data, selected_data, discarded_data
+            
+            # Apply the saved custom order if it exists
+            elif st.session_state.get('custom_order', None) is not None:
+                try:
+                    selected_data = selected_data.set_index(y_col).loc[st.session_state.custom_order].reset_index()
+                except KeyError:
+                    # If there's an error with the saved order, fall back to original data
+                    st.warning("Unable to apply saved order. Reverting to default sorting.")
+                    selected_data = original_selected_data
+                    if 'custom_order' in st.session_state:
+                        del st.session_state.custom_order
+                    if 'custom_order_applied' in st.session_state:
+                        del st.session_state.custom_order_applied
+
+        # Apply other sorting methods
         elif annotation_sort == "p-value":
             selected_data = selected_data.sort_values(by=color_col, ascending=True)
         elif annotation_sort == "name_length":
@@ -231,6 +263,9 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
             selected_data = selected_data.sort_values(by=y_col, ascending=True)
         elif annotation_sort == "reverse_alphabetic":
             selected_data = selected_data.sort_values(by=y_col, ascending=False)
+        elif annotation_sort == "none":
+            # Keep the original order from get_sorted_filtered_data
+            selected_data = original_selected_data
 
         # Reset drag and drop state when switching to a different sorting method
         if annotation_sort != "drag_and_drop":
@@ -238,7 +273,6 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                 del st.session_state.custom_order_applied
             if 'custom_order' in st.session_state:
                 del st.session_state.custom_order
-
 
         # For "none", we keep the original order
 
