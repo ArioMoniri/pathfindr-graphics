@@ -211,7 +211,7 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Plot the scatter points
         scatter = ax2.scatter(x_values, y_values, c=pd.to_numeric(selected_data[color_col], errors='coerce'), cmap=colormap, 
                               s=sizes, alpha=opacities, edgecolors='black')
-        ax2.spines['left'].set_position(('outward', 30)) 
+        ax2.spines['left'].set_position(('outward', 100)) 
         ax2.set_yticks(y_values)
         ax2.set_yticklabels([])  
         color_data = pd.to_numeric(selected_data[color_col], errors='coerce')
