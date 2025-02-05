@@ -211,42 +211,44 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         # Store original data before sorting
         original_selected_data = selected_data.copy()
 
-        # Handle sorting based on selected option
+        # Handle drag and drop sorting first
         if annotation_sort == "drag_and_drop":
-            if not st.session_state.get('custom_order_applied', False):
-                st.write("### Drag and Drop Sorting")
-                st.write("Drag rows to reorder them")
-                
-                drag_drop_data = pd.DataFrame({
-                    'Annotation': selected_data[y_col],
-                    'Value': selected_data[sort_by]
-                })
-                
-                # Create drag-drop interface with minimal gap
-                grid_response = create_draggable_table(drag_drop_data)
-                
-                # Place button immediately after the table
-                col1, col2, col3 = st.columns([1, 1, 1])
-                with col2:
-                    if st.button('Apply Order and Generate Plot'):
-                        if grid_response['data'] is not None:
-                            st.session_state.custom_order = grid_response['data']['Annotation'].tolist()
-                            st.session_state.custom_order_applied = True
-                            # Apply the custom order immediately
-                            selected_data = selected_data.set_index(y_col).loc[st.session_state.custom_order].reset_index()
-                        else:
-                            st.error("No data received from drag and drop interface")
-                            return None, filtered_data, selected_data, discarded_data
-                    
-                if not st.session_state.get('custom_order_applied', False):
-                    return None, filtered_data, selected_data, discarded_data
+            st.write("### Drag and Drop Sorting")
+            st.write("Drag rows to reorder them")
             
-            # Apply the saved custom order if it exists
+            drag_drop_data = pd.DataFrame({
+                'Annotation': selected_data[y_col],
+                'Value': selected_data[sort_by]
+            })
+            
+            # Create drag-drop interface
+            grid_response = create_draggable_table(drag_drop_data)
+            
+            col1, col2, col3 = st.columns([1, 1, 1])
+            with col2:
+                if st.button('Apply Order and Generate Plot'):
+                    if grid_response['data'] is not None:
+                        # Store the custom order in session state
+                        custom_order = grid_response['data']['Annotation'].tolist()
+                        st.session_state.custom_order = custom_order
+                        st.session_state.custom_order_applied = True
+                        
+                        # Apply the custom order immediately
+                        selected_data = selected_data.set_index(y_col).loc[custom_order].reset_index()
+                    else:
+                        st.error("No data received from drag and drop interface")
+                        return None, filtered_data, selected_data, discarded_data
+            
+            # If custom order hasn't been applied yet, return early
+            if not st.session_state.get('custom_order_applied', False):
+                return None, filtered_data, selected_data, discarded_data
+            
+            # Apply saved custom order if it exists
             elif st.session_state.get('custom_order', None) is not None:
+                custom_order = st.session_state.custom_order
                 try:
-                    selected_data = selected_data.set_index(y_col).loc[st.session_state.custom_order].reset_index()
+                    selected_data = selected_data.set_index(y_col).loc[custom_order].reset_index()
                 except KeyError:
-                    # If there's an error with the saved order, fall back to original data
                     st.warning("Unable to apply saved order. Reverting to default sorting.")
                     selected_data = original_selected_data
                     if 'custom_order' in st.session_state:
