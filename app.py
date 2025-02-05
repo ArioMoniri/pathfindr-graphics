@@ -11,9 +11,7 @@ import time
 import re
 import matplotlib.font_manager as fm
 import streamlit.components.v1 as components
-from st_aggrid import AgGrid, GridUpdateMode, GridOptionsBuilder
-from st_aggrid.grid_options_builder import GridOptionsBuilder
-from st_aggrid.shared import GridUpdateMode, DataReturnMode
+
 
 
 
@@ -63,34 +61,45 @@ def load_data(uploaded_file):
 
 
 # Add this function after the load_data function
-def create_draggable_table(data):
-    gb = GridOptionsBuilder.from_dataframe(data)
-    gb.configure_default_column(resizable=True, filterable=True, sorteable=True)
+def create_draggable_items(data):
+    annotations = data['Annotation'].tolist()
+    values = data['Value'].tolist()
     
-    # Configure drag and drop settings
-    gb.configure_grid_options(
-        rowDragManaged=True,
-        rowDragEntireRow=True,
-        animateRows=True
-    )
+    # Create columns for the drag and drop interface
+    cols = st.columns(len(annotations))
     
-    # Remove checkbox selection
-    gb.configure_selection(selection_mode="single", use_checkbox=False)
+    # Store the current order
+    if 'item_order' not in st.session_state:
+        st.session_state.item_order = list(range(len(annotations)))
     
-    # Configure specific columns
-    gb.configure_column('Annotation', width=300)  # Adjust width for annotation text
-    gb.configure_column('Value', width=100)  # Adjust width for value column
+    # Create draggable elements
+    for i, col in enumerate(cols):
+        with col:
+            idx = st.session_state.item_order[i]
+            st.text_input(f"Item {i}", 
+                         value=f"{annotations[idx]} ({values[idx]:.2f})",
+                         key=f"drag_{i}",
+                         label_visibility="collapsed")
     
-    return AgGrid(
-        data,
-        gridOptions=gb.build(),
-        update_mode=GridUpdateMode.MODEL_CHANGED,
-        data_return_mode=DataReturnMode.AS_INPUT,
-        allow_unsafe_jscode=True,
-        theme="material",
-        height=300,  # Reduced height to minimize empty space
-        key="drag_drop_grid"
-    )
+    # Add reordering buttons
+    for i in range(len(annotations) - 1):
+        cols = st.columns([1, 1, 8])  # Adjust column ratios
+        with cols[0]:
+            if st.button("↑", key=f"up_{i}"):
+                idx = st.session_state.item_order[i]
+                prev_idx = st.session_state.item_order[i - 1]
+                st.session_state.item_order[i] = prev_idx
+                st.session_state.item_order[i - 1] = idx
+                st.rerun()
+        with cols[1]:
+            if st.button("↓", key=f"down_{i}"):
+                idx = st.session_state.item_order[i]
+                next_idx = st.session_state.item_order[i + 1]
+                st.session_state.item_order[i] = next_idx
+                st.session_state.item_order[i + 1] = idx
+                st.rerun()
+
+    return [annotations[i] for i in st.session_state.item_order]
 # Function to generate a custom colormap
 @lru_cache(maxsize=None)
 def generate_colormap(color1, color2):
@@ -213,48 +222,49 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
 
         # Handle drag and drop sorting first
         if annotation_sort == "drag_and_drop":
-            st.write("### Drag and Drop Sorting")
-            st.write("Drag rows to reorder them")
+            st.write("### Manual Reordering")
+            st.write("Use the arrows to reorder items")
             
-            drag_drop_data = pd.DataFrame({
-                'Annotation': selected_data[y_col],
-                'Value': selected_data[sort_by]
-            })
+            # Initialize session state for item order if not exists
+            if 'item_order' not in st.session_state:
+                st.session_state.item_order = list(range(len(selected_data)))
             
-            # Create drag-drop interface
-            grid_response = create_draggable_table(drag_drop_data)
+            # Create columns for each item
+            for i in range(len(selected_data)):
+                cols = st.columns([1, 1, 8])
+                
+                # Add up/down buttons
+                with cols[0]:
+                    if i > 0 and st.button("↑", key=f"up_{i}"):
+                        # Swap with previous item
+                        idx = st.session_state.item_order[i]
+                        prev_idx = st.session_state.item_order[i - 1]
+                        st.session_state.item_order[i] = prev_idx
+                        st.session_state.item_order[i - 1] = idx
+                        st.rerun()
+                
+                with cols[1]:
+                    if i < len(selected_data) - 1 and st.button("↓", key=f"down_{i}"):
+                        # Swap with next item
+                        idx = st.session_state.item_order[i]
+                        next_idx = st.session_state.item_order[i + 1]
+                        st.session_state.item_order[i] = next_idx
+                        st.session_state.item_order[i + 1] = idx
+                        st.rerun()
+                
+                # Display item
+                with cols[2]:
+                    idx = st.session_state.item_order[i]
+                    st.text(f"{selected_data[y_col].iloc[idx]} ({selected_data[sort_by].iloc[idx]:.2f})")
             
-            col1, col2, col3 = st.columns([1, 1, 1])
-            with col2:
-                if st.button('Apply Order and Generate Plot'):
-                    if grid_response['data'] is not None:
-                        # Store the custom order in session state
-                        custom_order = grid_response['data']['Annotation'].tolist()
-                        st.session_state.custom_order = custom_order
-                        st.session_state.custom_order_applied = True
-                        
-                        # Apply the custom order immediately
-                        selected_data = selected_data.set_index(y_col).loc[custom_order].reset_index()
-                    else:
-                        st.error("No data received from drag and drop interface")
-                        return None, filtered_data, selected_data, discarded_data
-            
-            # If custom order hasn't been applied yet, return early
-            if not st.session_state.get('custom_order_applied', False):
+            # Generate Plot button
+            if st.button('Generate Plot'):
+                # Apply the custom order
+                ordered_indices = st.session_state.item_order
+                selected_data = selected_data.iloc[ordered_indices].reset_index(drop=True)
+                st.session_state.custom_order_applied = True
+            else:
                 return None, filtered_data, selected_data, discarded_data
-            
-            # Apply saved custom order if it exists
-            elif st.session_state.get('custom_order', None) is not None:
-                custom_order = st.session_state.custom_order
-                try:
-                    selected_data = selected_data.set_index(y_col).loc[custom_order].reset_index()
-                except KeyError:
-                    st.warning("Unable to apply saved order. Reverting to default sorting.")
-                    selected_data = original_selected_data
-                    if 'custom_order' in st.session_state:
-                        del st.session_state.custom_order
-                    if 'custom_order_applied' in st.session_state:
-                        del st.session_state.custom_order_applied
 
         # Apply other sorting methods
         elif annotation_sort == "p-value":
@@ -266,15 +276,14 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         elif annotation_sort == "reverse_alphabetic":
             selected_data = selected_data.sort_values(by=y_col, ascending=False)
         elif annotation_sort == "none":
-            # Keep the original order from get_sorted_filtered_data
             selected_data = original_selected_data
 
         # Reset drag and drop state when switching to a different sorting method
         if annotation_sort != "drag_and_drop":
             if 'custom_order_applied' in st.session_state:
                 del st.session_state.custom_order_applied
-            if 'custom_order' in st.session_state:
-                del st.session_state.custom_order
+            if 'item_order' in st.session_state:
+                del st.session_state.item_order
 
         # For "none", we keep the original order
 
