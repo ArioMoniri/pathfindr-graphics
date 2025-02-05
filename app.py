@@ -11,7 +11,7 @@ import time
 import re
 import matplotlib.font_manager as fm
 import streamlit.components.v1 as components
-from streamlit_draggable_list import draggable_list
+
 
 
 
@@ -65,38 +65,49 @@ def load_data(uploaded_file):
 
 def handle_manual_reordering(selected_data, y_col, sort_by):
     st.write("### Manual Reordering")
-    st.write("Drag and drop the items to reorder them. Click **Generate Plot** when done.")
+    st.write("Use the arrows to change the order of items. Click 'Generate Plot' when done.")
 
-    # Create a list of items with a label and the original index.
-    items = []
-    for idx, row in selected_data.iterrows():
-        if pd.api.types.is_numeric_dtype(selected_data[sort_by]):
-            label = f"{row[y_col]} ({row[sort_by]:.2f})"
-        else:
-            label = f"{row[y_col]} ({row[sort_by]})"
-        items.append({"label": label, "index": idx})
+    if 'selected_data' not in st.session_state:
+        st.session_state.selected_data = selected_data.copy()
+    if 'current_order' not in st.session_state:
+        st.session_state.current_order = list(range(len(st.session_state.selected_data)))
 
-    # Render the draggable list.
-    # The component will return the items in their new order.
-    new_order = draggable_list(items, key="draggable_list_key")
-
-    # Optionally, display the current order for the user.
-    st.write("**Current order:**")
-    if new_order is not None:
-        for item in new_order:
-            st.write(item["label"])
-    else:
-        st.write("No changes yet.")
-
-    # When the user clicks "Generate Plot", update the DataFrame ordering.
-    if st.button("Generate Plot"):
-        if new_order is not None:
-            # Extract the new order of indices.
-            new_indices = [item["index"] for item in new_order]
-            reordered_data = selected_data.loc[new_indices].reset_index(drop=True)
-            return reordered_data
-        else:
-            return selected_data
+    
+    current_order = st.session_state.current_order
+    reorder_container = st.container()
+    changed = False
+    
+    # Display each item with move up/down controls
+    with reorder_container:
+        for i in range(len(st.session_state.selected_data)):
+            col1, col2, col3 = st.columns([0.5, 0.5, 4])
+            idx = current_order[i]
+            with col1:
+                if i > 0 and st.button('↑', key=f'up_{i}'):
+                    # Swap current_order items
+                    current_order[i], current_order[i-1] = current_order[i-1], current_order[i]
+                    changed = True
+            with col2:
+                if i < len(st.session_state.selected_data) - 1 and st.button('↓', key=f'down_{i}'):
+                    current_order[i], current_order[i+1] = current_order[i+1], current_order[i]
+                    changed = True
+            with col3:
+                # Display item with its corresponding sort value
+                row = st.session_state.selected_data.iloc[idx]
+                if pd.api.types.is_numeric_dtype(st.session_state.selected_data[sort_by]):
+                    st.text(f"{row[y_col]} ({row[sort_by]:.2f})")
+                else:
+                    st.text(f"{row[y_col]} ({row[sort_by]})")
+    
+    
+    # Generate plot button outside the reorder container
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button('Generate Plot', key='generate_plot_final', use_container_width=True):
+            st.session_state.custom_order_applied = True
+            # Update the stored selected data based on the new order
+            st.session_state.selected_data = st.session_state.selected_data.iloc[current_order].reset_index(drop=True)
+            return st.session_state.selected_data
 
     return None
     
@@ -221,13 +232,13 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         original_selected_data = selected_data.copy()
 
         # Handle drag and drop sorting first
+        # Handle drag and drop sorting first
         if annotation_sort == "drag_and_drop":
             reordered_data = handle_manual_reordering(selected_data, y_col, sort_by)
             if reordered_data is not None:
                 selected_data = reordered_data
             else:
-                st.info("Please drag-and-drop to reorder and then click **Generate Plot**.")
-                st.stop()
+                return None, filtered_data, selected_data, discarded_data
 
         # Apply other sorting methods
         elif annotation_sort == "p-value":
