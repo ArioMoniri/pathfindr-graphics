@@ -255,7 +255,11 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
                 # Display item
                 with cols[2]:
                     idx = st.session_state.item_order[i]
-                    st.text(f"{selected_data[y_col].iloc[idx]} ({selected_data[sort_by].iloc[idx]:.2f})")
+                    # Check if sort_by column contains numeric values
+                    if pd.api.types.is_numeric_dtype(selected_data[sort_by]):
+                        st.text(f"{selected_data[y_col].iloc[idx]} ({selected_data[sort_by].iloc[idx]:.2f})")
+                    else:
+                        st.text(f"{selected_data[y_col].iloc[idx]} ({selected_data[sort_by].iloc[idx]})")
             
             # Generate Plot button
             if st.button('Generate Plot'):
