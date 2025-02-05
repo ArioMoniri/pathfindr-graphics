@@ -61,19 +61,18 @@ def load_data(uploaded_file):
 
 
 
-# Function to generate a custom colormap
-@lru_cache(maxsize=None)
+
 
 def handle_manual_reordering(selected_data, y_col, sort_by):
     st.write("### Manual Reordering")
     st.write("Use the arrows to change the order of items. Click 'Generate Plot' when done.")
     
-    # Get the initial data we need
-    items = list(range(len(selected_data)))
+    # Create a unique session state key for this data
+    session_key = f"order_{len(selected_data)}"
     
     # Initialize session state for order if not exists
-    if 'current_order' not in st.session_state:
-        st.session_state.current_order = items.copy()
+    if session_key not in st.session_state:
+        st.session_state[session_key] = list(range(len(selected_data)))
         st.session_state.reordered = False
     
     # Create a container for the reorderable list
@@ -82,24 +81,24 @@ def handle_manual_reordering(selected_data, y_col, sort_by):
     with reorder_container:
         changed = False
         # Display each item with move up/down controls
-        for i in range(len(items)):
+        for i in range(len(selected_data)):
             col1, col2, col3 = st.columns([0.5, 0.5, 4])
-            current_idx = st.session_state.current_order[i]
+            current_idx = st.session_state[session_key][i]
             
             with col1:
                 if i > 0:
                     if st.button('↑', key=f'up_{i}', use_container_width=True):
                         prev_idx = i - 1
-                        st.session_state.current_order[i], st.session_state.current_order[prev_idx] = \
-                            st.session_state.current_order[prev_idx], st.session_state.current_order[i]
+                        st.session_state[session_key][i], st.session_state[session_key][prev_idx] = \
+                            st.session_state[session_key][prev_idx], st.session_state[session_key][i]
                         changed = True
             
             with col2:
-                if i < len(items) - 1:
+                if i < len(selected_data) - 1:
                     if st.button('↓', key=f'down_{i}', use_container_width=True):
                         next_idx = i + 1
-                        st.session_state.current_order[i], st.session_state.current_order[next_idx] = \
-                            st.session_state.current_order[next_idx], st.session_state.current_order[i]
+                        st.session_state[session_key][i], st.session_state[session_key][next_idx] = \
+                            st.session_state[session_key][next_idx], st.session_state[session_key][i]
                         changed = True
             
             with col3:
@@ -115,7 +114,7 @@ def handle_manual_reordering(selected_data, y_col, sort_by):
     
     # Generate Plot button
     if st.button('Generate Plot', key='generate_plot_button'):
-        reordered_data = selected_data.iloc[st.session_state.current_order].reset_index(drop=True)
+        reordered_data = selected_data.iloc[st.session_state[session_key]].reset_index(drop=True)
         st.session_state.custom_order_applied = True
         return reordered_data
     
@@ -123,7 +122,9 @@ def handle_manual_reordering(selected_data, y_col, sort_by):
     
 def generate_colormap(color1, color2):
     return LinearSegmentedColormap.from_list('custom_cmap', [color1, color2])
-
+    
+# Function to generate a custom colormap
+@lru_cache(maxsize=None)
 # Optimized normalize_data function
 @np.vectorize
 def normalize_data_vectorized(value, min_val, max_val, factor=1.0, increase=True):
