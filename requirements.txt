@@ -10,4 +10,4 @@ scipy
 regex
 streamlit_sortables
 streamlit-draggable-list
-st-sortable
+
