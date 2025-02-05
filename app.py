@@ -11,7 +11,7 @@ import time
 import re
 import matplotlib.font_manager as fm
 import streamlit.components.v1 as components
-from st_sortable import sortable_list
+from streamlit_draggable_list import draggable_list
 
 
 
@@ -67,8 +67,7 @@ def handle_manual_reordering(selected_data, y_col, sort_by):
     st.write("### Manual Reordering")
     st.write("Drag and drop the items to reorder them. Click **Generate Plot** when done.")
 
-    # Create a list of items with a label (for display) and the original index.
-    # (Adjust the formatting as needed. Here we assume numeric formatting for sort_by.)
+    # Create a list of items with a label and the original index.
     items = []
     for idx, row in selected_data.iterrows():
         if pd.api.types.is_numeric_dtype(selected_data[sort_by]):
@@ -77,26 +76,28 @@ def handle_manual_reordering(selected_data, y_col, sort_by):
             label = f"{row[y_col]} ({row[sort_by]})"
         items.append({"label": label, "index": idx})
 
-    # Call the st-sortable component.
-    # This will render a drag-and-drop list and return the list in its new order.
-    reordered_items = sortable_list(items, key="sortable_list")
+    # Render the draggable list.
+    # The component will return the items in their new order.
+    new_order = draggable_list(items, key="draggable_list_key")
 
-    # If the reordered list is available, compute the new order.
-    if reordered_items is not None:
-        new_order_indices = [item["index"] for item in reordered_items]
-        reordered_data = selected_data.loc[new_order_indices].reset_index(drop=True)
+    # Optionally, display the current order for the user.
+    st.write("**Current order:**")
+    if new_order is not None:
+        for item in new_order:
+            st.write(item["label"])
     else:
-        # If nothing has changed, fall back to the original order.
-        reordered_data = selected_data
+        st.write("No changes yet.")
 
-    # Only return the reordered data when the user explicitly clicks the button.
+    # When the user clicks "Generate Plot", update the DataFrame ordering.
     if st.button("Generate Plot"):
-        return reordered_data
+        if new_order is not None:
+            # Extract the new order of indices.
+            new_indices = [item["index"] for item in new_order]
+            reordered_data = selected_data.loc[new_indices].reset_index(drop=True)
+            return reordered_data
+        else:
+            return selected_data
 
-    # Otherwise, display the current ordering (the UI remains visible).
-    st.write("Current order:")
-    for item in reordered_items if reordered_items is not None else items:
-        st.write(item["label"])
     return None
     
 def generate_colormap(color1, color2):
@@ -220,15 +221,13 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         original_selected_data = selected_data.copy()
 
         # Handle drag and drop sorting first
-        # Handle drag and drop sorting first
         if annotation_sort == "drag_and_drop":
             reordered_data = handle_manual_reordering(selected_data, y_col, sort_by)
             if reordered_data is not None:
                 selected_data = reordered_data
             else:
-                # If the user hasn’t clicked "Generate Plot" yet, simply return without plotting.
                 st.info("Please drag-and-drop to reorder and then click **Generate Plot**.")
-                st.stop()  # Or return early.
+                st.stop()
 
         # Apply other sorting methods
         elif annotation_sort == "p-value":
