@@ -68,9 +68,12 @@ def handle_manual_reordering(selected_data, y_col, sort_by):
     st.write("### Manual Reordering")
     st.write("Use the arrows to change the order of items. Click 'Generate Plot' when done.")
     
+    # Get the initial data we need
+    items = list(range(len(selected_data)))
+    
     # Initialize session state for order if not exists
     if 'current_order' not in st.session_state:
-        st.session_state.current_order = list(range(len(selected_data)))
+        st.session_state.current_order = items.copy()
         st.session_state.reordered = False
     
     # Create a container for the reorderable list
@@ -79,37 +82,32 @@ def handle_manual_reordering(selected_data, y_col, sort_by):
     with reorder_container:
         changed = False
         # Display each item with move up/down controls
-        for i in range(len(selected_data)):
+        for i in range(len(items)):
             col1, col2, col3 = st.columns([0.5, 0.5, 4])
+            current_idx = st.session_state.current_order[i]
             
             with col1:
                 if i > 0:
                     if st.button('↑', key=f'up_{i}', use_container_width=True):
-                        # Swap items
-                        idx = i
                         prev_idx = i - 1
-                        st.session_state.current_order[idx], st.session_state.current_order[prev_idx] = \
-                            st.session_state.current_order[prev_idx], st.session_state.current_order[idx]
+                        st.session_state.current_order[i], st.session_state.current_order[prev_idx] = \
+                            st.session_state.current_order[prev_idx], st.session_state.current_order[i]
                         changed = True
-                        st.session_state.reordered = True
             
             with col2:
-                if i < len(selected_data) - 1:
+                if i < len(items) - 1:
                     if st.button('↓', key=f'down_{i}', use_container_width=True):
-                        # Swap items
-                        idx = i
                         next_idx = i + 1
-                        st.session_state.current_order[idx], st.session_state.current_order[next_idx] = \
-                            st.session_state.current_order[next_idx], st.session_state.current_order[idx]
+                        st.session_state.current_order[i], st.session_state.current_order[next_idx] = \
+                            st.session_state.current_order[next_idx], st.session_state.current_order[i]
                         changed = True
-                        st.session_state.reordered = True
             
             with col3:
-                idx = st.session_state.current_order[i]
+                current_row = selected_data.iloc[current_idx]
                 if pd.api.types.is_numeric_dtype(selected_data[sort_by]):
-                    display_text = f"{selected_data[y_col].iloc[idx]} ({selected_data[sort_by].iloc[idx]:.2f})"
+                    display_text = f"{current_row[y_col]} ({current_row[sort_by]:.2f})"
                 else:
-                    display_text = f"{selected_data[y_col].iloc[idx]} ({selected_data[sort_by].iloc[idx]})"
+                    display_text = f"{current_row[y_col]} ({current_row[sort_by]})"
                 st.text(display_text)
         
         if changed:
@@ -117,8 +115,7 @@ def handle_manual_reordering(selected_data, y_col, sort_by):
     
     # Generate Plot button
     if st.button('Generate Plot', key='generate_plot_button'):
-        ordered_indices = st.session_state.current_order
-        reordered_data = selected_data.iloc[ordered_indices].reset_index(drop=True)
+        reordered_data = selected_data.iloc[st.session_state.current_order].reset_index(drop=True)
         st.session_state.custom_order_applied = True
         return reordered_data
     
