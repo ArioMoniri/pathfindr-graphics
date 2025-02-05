@@ -67,49 +67,48 @@ def handle_manual_reordering(selected_data, y_col, sort_by):
     st.write("### Manual Reordering")
     st.write("Use the arrows to change the order of items. Click 'Generate Plot' when done.")
 
+    # Initialize session state only once.
     if 'selected_data' not in st.session_state:
         st.session_state.selected_data = selected_data.copy()
     if 'current_order' not in st.session_state:
         st.session_state.current_order = list(range(len(st.session_state.selected_data)))
 
-    
     current_order = st.session_state.current_order
-    reorder_container = st.container()
-    changed = False
-    
-    # Display each item with move up/down controls
-    with reorder_container:
+
+    # Create a container for the reordering UI.
+    with st.container():
         for i in range(len(st.session_state.selected_data)):
             col1, col2, col3 = st.columns([0.5, 0.5, 4])
-            idx = current_order[i]
+            # Display the row using the current order.
+            row = st.session_state.selected_data.iloc[current_order[i]]
             with col1:
-                if i > 0 and st.button('↑', key=f'up_{i}'):
-                    # Swap current_order items
-                    current_order[i], current_order[i-1] = current_order[i-1], current_order[i]
-                    changed = True
+                if i > 0 and st.button("↑", key=f"up_{i}"):
+                    # Swap the items in the order list.
+                    current_order[i], current_order[i - 1] = current_order[i - 1], current_order[i]
+                    st.session_state.current_order = current_order  # Update state.
+                    st.experimental_rerun()  # Immediately rerun to update the UI.
             with col2:
-                if i < len(st.session_state.selected_data) - 1 and st.button('↓', key=f'down_{i}'):
-                    current_order[i], current_order[i+1] = current_order[i+1], current_order[i]
-                    changed = True
+                if i < len(st.session_state.selected_data) - 1 and st.button("↓", key=f"down_{i}"):
+                    current_order[i], current_order[i + 1] = current_order[i + 1], current_order[i]
+                    st.session_state.current_order = current_order
+                    st.experimental_rerun()
             with col3:
-                # Display item with its corresponding sort value
-                row = st.session_state.selected_data.iloc[idx]
+                # Display the item label along with its sort value.
                 if pd.api.types.is_numeric_dtype(st.session_state.selected_data[sort_by]):
                     st.text(f"{row[y_col]} ({row[sort_by]:.2f})")
                 else:
                     st.text(f"{row[y_col]} ({row[sort_by]})")
-    
-    
-    # Generate plot button outside the reorder container
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button('Generate Plot', key='generate_plot_final', use_container_width=True):
-            st.session_state.custom_order_applied = True
-            # Update the stored selected data based on the new order
-            st.session_state.selected_data = st.session_state.selected_data.iloc[current_order].reset_index(drop=True)
-            return st.session_state.selected_data
 
-    return None
+    # Display the Generate Plot button below the reordering table.
+    if st.button("Generate Plot", key="generate_plot_final", use_container_width=True):
+        # Update selected_data with the new order.
+        st.session_state.selected_data = st.session_state.selected_data.iloc[current_order].reset_index(drop=True)
+        st.session_state.custom_order_applied = True
+        # Return the reordered data to be used for plotting.
+        return st.session_state.selected_data
+
+    # If the Generate Plot button was not pressed, return the current ordering so that the UI remains.
+    return st.session_state.selected_data
     
 def generate_colormap(color1, color2):
     return LinearSegmentedColormap.from_list('custom_cmap', [color1, color2])
