@@ -60,48 +60,70 @@ def load_data(uploaded_file):
         return None
 
 
-# Add this function after the load_data function
-def create_draggable_items(data):
-    annotations = data['Annotation'].tolist()
-    values = data['Value'].tolist()
-    
-    # Create columns for the drag and drop interface
-    cols = st.columns(len(annotations))
-    
-    # Store the current order
-    if 'item_order' not in st.session_state:
-        st.session_state.item_order = list(range(len(annotations)))
-    
-    # Create draggable elements
-    for i, col in enumerate(cols):
-        with col:
-            idx = st.session_state.item_order[i]
-            st.text_input(f"Item {i}", 
-                         value=f"{annotations[idx]} ({values[idx]:.2f})",
-                         key=f"drag_{i}",
-                         label_visibility="collapsed")
-    
-    # Add reordering buttons
-    for i in range(len(annotations) - 1):
-        cols = st.columns([1, 1, 8])  # Adjust column ratios
-        with cols[0]:
-            if st.button("↑", key=f"up_{i}"):
-                idx = st.session_state.item_order[i]
-                prev_idx = st.session_state.item_order[i - 1]
-                st.session_state.item_order[i] = prev_idx
-                st.session_state.item_order[i - 1] = idx
-                st.rerun()
-        with cols[1]:
-            if st.button("↓", key=f"down_{i}"):
-                idx = st.session_state.item_order[i]
-                next_idx = st.session_state.item_order[i + 1]
-                st.session_state.item_order[i] = next_idx
-                st.session_state.item_order[i + 1] = idx
-                st.rerun()
 
-    return [annotations[i] for i in st.session_state.item_order]
 # Function to generate a custom colormap
 @lru_cache(maxsize=None)
+
+def handle_manual_reordering(selected_data, y_col, sort_by):
+    st.write("### Manual Reordering")
+    st.write("Use the arrows to change the order of items. Click 'Generate Plot' when done.")
+    
+    # Initialize session state for order if not exists
+    if 'current_order' not in st.session_state:
+        st.session_state.current_order = list(range(len(selected_data)))
+        st.session_state.reordered = False
+    
+    # Create a container for the reorderable list
+    reorder_container = st.container()
+    
+    with reorder_container:
+        changed = False
+        # Display each item with move up/down controls
+        for i in range(len(selected_data)):
+            col1, col2, col3 = st.columns([0.5, 0.5, 4])
+            
+            with col1:
+                if i > 0:
+                    if st.button('↑', key=f'up_{i}', use_container_width=True):
+                        # Swap items
+                        idx = i
+                        prev_idx = i - 1
+                        st.session_state.current_order[idx], st.session_state.current_order[prev_idx] = \
+                            st.session_state.current_order[prev_idx], st.session_state.current_order[idx]
+                        changed = True
+                        st.session_state.reordered = True
+            
+            with col2:
+                if i < len(selected_data) - 1:
+                    if st.button('↓', key=f'down_{i}', use_container_width=True):
+                        # Swap items
+                        idx = i
+                        next_idx = i + 1
+                        st.session_state.current_order[idx], st.session_state.current_order[next_idx] = \
+                            st.session_state.current_order[next_idx], st.session_state.current_order[idx]
+                        changed = True
+                        st.session_state.reordered = True
+            
+            with col3:
+                idx = st.session_state.current_order[i]
+                if pd.api.types.is_numeric_dtype(selected_data[sort_by]):
+                    display_text = f"{selected_data[y_col].iloc[idx]} ({selected_data[sort_by].iloc[idx]:.2f})"
+                else:
+                    display_text = f"{selected_data[y_col].iloc[idx]} ({selected_data[sort_by].iloc[idx]})"
+                st.text(display_text)
+        
+        if changed:
+            st.rerun()
+    
+    # Generate Plot button
+    if st.button('Generate Plot', key='generate_plot_button'):
+        ordered_indices = st.session_state.current_order
+        reordered_data = selected_data.iloc[ordered_indices].reset_index(drop=True)
+        st.session_state.custom_order_applied = True
+        return reordered_data
+    
+    return None
+    
 def generate_colormap(color1, color2):
     return LinearSegmentedColormap.from_list('custom_cmap', [color1, color2])
 
@@ -221,52 +243,11 @@ def plot_and_export_chart(df, x_col, y_col, color_col, size_col, opacity_col, ra
         original_selected_data = selected_data.copy()
 
         # Handle drag and drop sorting first
+        # Handle drag and drop sorting first
         if annotation_sort == "drag_and_drop":
-            st.write("### Manual Reordering")
-            st.write("Use the arrows to reorder items")
-            
-            # Initialize session state for item order if not exists
-            if 'item_order' not in st.session_state:
-                st.session_state.item_order = list(range(len(selected_data)))
-            
-            # Create columns for each item
-            for i in range(len(selected_data)):
-                cols = st.columns([1, 1, 8])
-                
-                # Add up/down buttons
-                with cols[0]:
-                    if i > 0 and st.button("↑", key=f"up_{i}"):
-                        # Swap with previous item
-                        idx = st.session_state.item_order[i]
-                        prev_idx = st.session_state.item_order[i - 1]
-                        st.session_state.item_order[i] = prev_idx
-                        st.session_state.item_order[i - 1] = idx
-                        st.rerun()
-                
-                with cols[1]:
-                    if i < len(selected_data) - 1 and st.button("↓", key=f"down_{i}"):
-                        # Swap with next item
-                        idx = st.session_state.item_order[i]
-                        next_idx = st.session_state.item_order[i + 1]
-                        st.session_state.item_order[i] = next_idx
-                        st.session_state.item_order[i + 1] = idx
-                        st.rerun()
-                
-                # Display item
-                with cols[2]:
-                    idx = st.session_state.item_order[i]
-                    # Check if sort_by column contains numeric values
-                    if pd.api.types.is_numeric_dtype(selected_data[sort_by]):
-                        st.text(f"{selected_data[y_col].iloc[idx]} ({selected_data[sort_by].iloc[idx]:.2f})")
-                    else:
-                        st.text(f"{selected_data[y_col].iloc[idx]} ({selected_data[sort_by].iloc[idx]})")
-            
-            # Generate Plot button
-            if st.button('Generate Plot'):
-                # Apply the custom order
-                ordered_indices = st.session_state.item_order
-                selected_data = selected_data.iloc[ordered_indices].reset_index(drop=True)
-                st.session_state.custom_order_applied = True
+            reordered_data = handle_manual_reordering(selected_data, y_col, sort_by)
+            if reordered_data is not None:
+                selected_data = reordered_data
             else:
                 return None, filtered_data, selected_data, discarded_data
 
